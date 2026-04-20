@@ -1,0 +1,20 @@
+---
+const navItems = [
+  { href: '/', label: '首页' },
+  { href: '/about', label: '关于' },
+  { href: '/projects', label: '项目' },
+  { href: '/blog', label: '想法' },
+  { href: '/daily-news', label: '新闻' },
+];
+---
+
+<header class="header">
+  <div class="container header-inner">
+    <a href="/" class="logo">AK22AK</a>
+    <nav class="nav">
+      {navItems.map(item => (
+        <a href={item.href}>{item.label}</a>
+      ))}
+    </nav>
+  </div>
+</header>

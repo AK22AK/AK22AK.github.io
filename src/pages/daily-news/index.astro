@@ -1,0 +1,51 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const newsData = await getCollection('daily-news');
+// 按日期降序排列
+newsData.sort((a, b) => b.data.date.localeCompare(a.data.date));
+const latest = newsData[0];
+---
+
+<BaseLayout title="每日新闻 - AK22AK" description="AK22AK 关注的每日技术资讯">
+  <h1>📰 每日新闻</h1>
+  <p style="color: #666; margin-bottom: 1.5rem;">
+    这里聚合了我关注的技术与行业资讯。数据可通过 GitHub Actions 每日自动更新。
+  </p>
+
+  {latest ? (
+    <section>
+      <h2 style="margin-bottom: 1rem;">📅 {latest.data.date}</h2>
+      <div class="card" style="padding: 0;">
+        {latest.data.items.map((item, idx) => (
+          <div class="news-item" style={idx === latest.data.items.length - 1 ? 'border-bottom: none;' : ''}>
+            <h3>
+              <a href={item.url} target="_blank">{item.title}</a>
+            </h3>
+            <p>{item.summary}</p>
+            <div class="source">来源：{item.source}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  ) : (
+    <div class="card">
+      <p>暂无新闻数据。稍后将通过自动化脚本更新。</p>
+    </div>
+  )}
+
+  {newsData.length > 1 && (
+    <section style="margin-top: 2rem;">
+      <h2>📂 历史归档</h2>
+      <ul class="post-list">
+        {newsData.slice(1).map(entry => (
+          <li>
+            <span style="font-weight: 600;">{entry.data.date}</span>
+            <span style="color: #888; margin-left: 0.5rem;">({entry.data.items.length} 条)</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )}
+</BaseLayout>

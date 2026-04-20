@@ -1,0 +1,23 @@
+{
+  "date": "2025-04-20",
+  "items": [
+    {
+      "title": "GitHub Copilot 推出新的 Agent 模式",
+      "summary": "GitHub 宣布 Copilot 新增 Agent 模式，可以自主执行多步骤编程任务，引发开发者社区热议。",
+      "url": "https://github.blog",
+      "source": "GitHub Blog"
+    },
+    {
+      "title": "Astro 6.0 正式发布",
+      "summary": "Astro 发布 6.0 版本，带来更快的构建速度和更完善的内容集合支持。",
+      "url": "https://astro.build",
+      "source": "Astro 官方"
+    },
+    {
+      "title": "OpenAI 发布 GPT-4.1 系列模型",
+      "summary": "新一代模型在代码能力和长上下文处理上有显著提升，API 定价更加亲民。",
+      "url": "https://openai.com",
+      "source": "OpenAI"
+    }
+  ]
+}

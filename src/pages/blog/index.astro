@@ -1,0 +1,28 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+
+const posts = await getCollection('blog');
+posts.sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+---
+
+<BaseLayout title="想法文字 - AK22AK" description="AK22AK 的技术博客与思考">
+  <h1>📝 想法文字</h1>
+  <p style="color: #666; margin-bottom: 1.5rem;">记录技术思考、学习笔记与日常随想。</p>
+
+  {posts.length === 0 ? (
+    <div class="card">
+      <p>暂时没有文章，稍后会有内容更新。</p>
+    </div>
+  ) : (
+    <ul class="post-list">
+      {posts.map(post => (
+        <li>
+          <a href={`/blog/${post.id}`} style="font-size: 1.1rem; font-weight: 600;">{post.data.title}</a>
+          <p style="color: #666; margin: 0.25rem 0 0; font-size: 0.9rem;">{post.data.description}</p>
+          <span class="post-meta">{post.data.pubDate.toLocaleDateString('zh-CN')}</span>
+        </li>
+      ))}
+    </ul>
+  )}
+</BaseLayout>
