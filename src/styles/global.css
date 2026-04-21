@@ -571,6 +571,26 @@ p {
   text-decoration: underline;
 }
 
+/* Ginger mark — shows top 3/4 of the emoji */
+.ginger-mark {
+  display: inline-block;
+  width: 0.9em;
+  height: 1em;
+  overflow: hidden;
+  position: relative;
+  vertical-align: baseline;
+  margin-left: 0.08em;
+}
+
+.ginger-inner {
+  position: absolute;
+  left: 50%;
+  bottom: -0.2em;
+  transform: translateX(-50%);
+  font-size: 1.0em;
+  line-height: 1;
+}
+
 .topic-section-icon {
   font-size: 1.2rem;
 }
