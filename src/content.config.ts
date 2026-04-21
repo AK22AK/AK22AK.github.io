@@ -16,6 +16,7 @@ const dailyNews = defineCollection({
   loader: glob({ pattern: '**/*.json', base: './src/content/daily-news' }),
   schema: z.object({
     date: z.string(),
+    update_time: z.string().optional(),
     items: z.array(
       z.object({
         title: z.string(),

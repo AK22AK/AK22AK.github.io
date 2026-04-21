@@ -1,46 +1,110 @@
 {
   "date": "2025-04-20",
+  "update_time": "2025-04-20T08:00:00",
   "items": [
     {
       "title": "GitHub Copilot 推出新的 Agent 模式",
       "summary": "GitHub 宣布 Copilot 新增 Agent 模式，可以自主执行多步骤编程任务，引发开发者社区热议。",
       "url": "https://github.blog",
-      "source": "GitHub Blog",
+      "source": "cnbeta",
       "topic": "tech"
     },
     {
       "title": "Astro 6.0 正式发布",
       "summary": "Astro 发布 6.0 版本，带来更快的构建速度和更完善的内容集合支持。",
       "url": "https://astro.build",
-      "source": "Astro 官方",
+      "source": "cnbeta",
       "topic": "tech"
     },
     {
       "title": "OpenAI 发布 GPT-4.1 系列模型",
       "summary": "新一代模型在代码能力和长上下文处理上有显著提升，API 定价更加亲民。",
       "url": "https://openai.com",
-      "source": "OpenAI",
+      "source": "solidot",
+      "topic": "tech"
+    },
+    {
+      "title": "iPhone 17 系列外观设计曝光",
+      "summary": "据供应链消息，iPhone 17 将采用全新相机模组布局，Pro 机型更薄。",
+      "url": "https://www.ithome.com",
+      "source": "ithome",
+      "topic": "tech"
+    },
+    {
+      "title": "华为 Pura 80 系列全场景新品发布",
+      "summary": "华为举办春季发布会，推出 Pura 80 系列手机及多款生态产品。",
+      "url": "https://www.ithome.com",
+      "source": "ithome",
+      "topic": "tech"
+    },
+    {
+      "title": "派早报：低空司回应无人机「起飞难」",
+      "summary": "低空司回应无人机管理新规，7 家电商平台因幽灵外卖被罚没 35.97 亿元，Kindle for PC 将停止运行。",
+      "url": "https://sspai.com",
+      "source": "sspai",
+      "topic": "tech"
+    },
+    {
+      "title": "具透｜Android 17 正式版前瞻",
+      "summary": "Android 17 带来全新通知系统与隐私沙盒改进，预计 8 月发布正式版。",
+      "url": "https://sspai.com",
+      "source": "sspai",
+      "topic": "tech"
+    },
+    {
+      "title": "AI 输出中的星号是怎么来的",
+      "summary": "谈中文 Markdown 强调标记的渲染问题，以及为什么 AI 生成的内容经常出现未正确渲染的 **。",
+      "url": "https://sspai.com",
+      "source": "sspai",
+      "topic": "tech"
+    },
+    {
+      "title": "荣耀 Magic 7 系列发布：AI 护眼屏成亮点",
+      "summary": "荣耀发布 Magic 7 系列，主打 AI 离焦护眼技术与骁龙 8 Elite 处理器。",
+      "url": "https://www.ifanr.com",
+      "source": "ifanr",
+      "topic": "tech"
+    },
+    {
+      "title": "36氪独家｜字节跳动低调测试 AI 编程工具",
+      "summary": "字节正在内部测试一款对标 Cursor 的 AI 编程助手，预计下半年对外开放。",
+      "url": "https://36kr.com",
+      "source": "36kr",
+      "topic": "tech"
+    },
+    {
+      "title": "科技爱好者周刊（第 341 期）",
+      "summary": "本周推荐：AI 代理的未来、WebAssembly 新进展、开源工具推荐。",
+      "url": "https://www.ruanyifeng.com",
+      "source": "ruanyifeng",
+      "topic": "tech"
+    },
+    {
+      "title": "独立开发者的 2025：AI 工具链实战",
+      "summary": "分享我过去一年使用 AI 辅助开发的真实经验，从编码到部署的完整工作流。",
+      "url": "https://catcoding.me",
+      "source": "catcoding",
       "topic": "tech"
     },
     {
       "title": "《塞尔达传说》新作确定发售日",
       "summary": "任天堂宣布《塞尔达传说》系列最新作将于今年冬季发售，支持中文语音。",
       "url": "https://www.nintendo.com",
-      "source": "任天堂官方",
+      "source": "cnbeta",
       "topic": "game"
     },
     {
       "title": "Steam 同时在线人数突破 4000 万",
       "summary": "Steam 平台再创历史新高，同时在线玩家数首次突破 4000 万大关。",
       "url": "https://store.steampowered.com",
-      "source": "Steam",
+      "source": "ithome",
       "topic": "game"
     },
     {
       "title": "赵心童挺进斯诺克世锦赛八强",
       "summary": "2025 斯诺克世锦赛继续进行，中国选手赵心童状态出色，连克强敌挺进八强。",
       "url": "https://www.worldsnooker.com",
-      "source": "世界斯诺克官网",
+      "source": "cnbeta",
       "topic": "snooker"
     }
   ]

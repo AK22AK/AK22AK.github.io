@@ -525,6 +525,52 @@ p {
   gap: 0.5rem;
 }
 
+.top10-badge {
+  font-size: 0.7rem;
+  padding: 0.15rem 0.5rem;
+  background: #fee2e2;
+  color: #dc2626;
+  border-radius: 4px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.item-rank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: #f3f4f6;
+  color: #666;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.topic-item {
+  display: flex;
+  gap: 0.875rem;
+  align-items: flex-start;
+}
+
+.item-body {
+  flex: 1;
+  min-width: 0;
+  margin-left: 0;
+}
+
+.source-home-link {
+  font-size: 0.85rem;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.source-home-link:hover {
+  text-decoration: underline;
+}
+
 .topic-section-icon {
   font-size: 1.2rem;
 }

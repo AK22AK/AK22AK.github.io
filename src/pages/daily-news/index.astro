@@ -8,7 +8,7 @@ const topicsPath = path.resolve('./src/data/daily-news-topics.json');
 const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
 const topics = topicsConfig.topics as Array<{
   id: string; name: string; type: string; description: string;
-  active: boolean; startDate?: string; endDate?: string;
+  active: boolean; sources: Array<{id: string; name: string; url: string}>;
 }>;
 
 const newsData = await getCollection('daily-news');
@@ -31,32 +31,39 @@ const weekdayNames = ['周日','周一','周二','周三','周四','周五','周
 const currentWeekday = currentDate ? weekdayNames[new Date(currentDate).getDay()] : '';
 
 function getTopicIcon(id: string) {
-  const map: Record<string, string> = {
-    tech: '🔥',
-    game: '🎮',
-    snooker: '🎱',
-  };
+  const map: Record<string, string> = { tech: '🔥', game: '🎮', snooker: '🎱' };
   return map[id] || '📰';
+}
+
+// top10 规则：当天该板块 items 按原序取前10（RSS 抓取时已按时间倒序）
+function getTop10(items: typeof currentItems, topicId: string) {
+  const topicItems = items.filter(i => i.topic === topicId);
+  const seen = new Set();
+  const result = [];
+  for (const item of topicItems) {
+    if (!seen.has(item.title)) {
+      seen.add(item.title);
+      result.push(item);
+    }
+    if (result.length >= 10) break;
+  }
+  return result;
 }
 ---
 
 <BaseLayout title="每日新闻 - AK22AK" description="AK22AK 关注的每日资讯聚合">
   <div class="daily-news-layout">
-    <!-- 侧边栏导航 -->
+    <!-- 侧边栏：板块导航 -->
     <aside class="sidebar">
       <div class="sidebar-inner">
-        <h3 class="sidebar-title">📖 模块导航</h3>
+        <h3 class="sidebar-title">📖 板块导航</h3>
         <nav class="sidebar-nav">
-          {activeTopics.map(topic => {
-            const items = currentItems.filter(item => item.topic === topic.id);
-            return (
-              <a href={`#${topic.id}`} class="sidebar-link">
-                <span class="sidebar-icon">{getTopicIcon(topic.id)}</span>
-                <span class="sidebar-name">{topic.name}</span>
-                {items.length > 0 && <span class="sidebar-count">{items.length}</span>}
-              </a>
-            );
-          })}
+          {activeTopics.map(topic => (
+            <a href={`#${topic.id}`} class="sidebar-link">
+              <span class="sidebar-icon">{getTopicIcon(topic.id)}</span>
+              <span class="sidebar-name">{topic.name}</span>
+            </a>
+          ))}
         </nav>
         <div class="sidebar-footer">
           <a href="/daily-news/archive/" class="sidebar-link muted">
@@ -79,41 +86,41 @@ function getTopicIcon(id: string) {
         <p class="date-desc">
           今日精选 {currentItems.length} 条资讯，为你摘选 {activeTopics.map(t => t.name).join('、')} 动态。
         </p>
-
         <div class="date-list">
           {availableDates.map(date => (
-            <a
-              href={`/daily-news/?date=${date}`}
-              class={`date-pill ${date === currentDate ? 'active' : ''}`}
-            >
+            <a href={`/daily-news/?date=${date}`} class={`date-pill ${date === currentDate ? 'active' : ''}`}>
               {date.slice(5)}
             </a>
           ))}
         </div>
       </header>
 
-      <!-- 板块内容 -->
+      <!-- 板块内容：只展示 top10 -->
       {activeTopics.map(topic => {
-        const items = currentItems.filter(item => item.topic === topic.id);
+        const top10 = getTop10(currentItems, topic.id);
         return (
           <section id={topic.id} class="topic-section">
             <div class="topic-section-header">
               <h2>
                 <span class="topic-section-icon">{getTopicIcon(topic.id)}</span>
                 {topic.name}
+                <span class="top10-badge">TOP10</span>
               </h2>
-              <a href={`/daily-news/topic/${topic.id}/`} class="topic-more">查看全部 →</a>
+              <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`} class="topic-more">查看全部 →</a>
             </div>
 
-            {items.length > 0 ? (
+            {top10.length > 0 ? (
               <div class="topic-list">
-                {items.map(item => (
+                {top10.map((item, idx) => (
                   <article class="topic-item">
-                    <h3 class="item-title">
-                      <a href={item.url} target="_blank">{item.title}</a>
-                    </h3>
-                    <p class="item-summary">{item.summary}</p>
-                    <span class="item-source">{item.source}</span>
+                    <span class="item-rank">{idx + 1}</span>
+                    <div class="item-body">
+                      <h3 class="item-title">
+                        <a href={item.url} target="_blank">{item.title}</a>
+                      </h3>
+                      <p class="item-summary">{item.summary}</p>
+                      <span class="item-source">{item.source}</span>
+                    </div>
                   </article>
                 ))}
               </div>
@@ -142,21 +149,16 @@ function getTopicIcon(id: string) {
 </BaseLayout>
 
 <script>
-  // 简单的锚点平滑滚动 + 侧边栏高亮
   document.querySelectorAll('.sidebar-link[href^="#"]').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const target = document.querySelector(link.getAttribute('href')!);
-      if (target) {
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
 
-  // 滚动时高亮当前板块
   const sections = document.querySelectorAll('.topic-section[id]');
   const sidebarLinks = document.querySelectorAll('.sidebar-link[href^="#"]');
-
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -166,6 +168,5 @@ function getTopicIcon(id: string) {
       }
     });
   }, { rootMargin: '-20% 0px -60% 0px' });
-
   sections.forEach(section => observer.observe(section));
 </script>

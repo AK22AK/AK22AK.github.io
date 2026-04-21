@@ -1,6 +1,5 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
-import NewsTopicNav from '../../../components/NewsTopicNav.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,84 +7,208 @@ import path from 'node:path';
 export async function getStaticPaths() {
   const topicsPath = path.resolve('./src/data/daily-news-topics.json');
   const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
-  const topics = topicsConfig.topics as Array<{
-    id: string; name: string; type: string; description: string;
-    active: boolean; startDate?: string; endDate?: string;
-  }>;
-  return topics.map(topic => ({
+  const topics = topicsConfig.topics;
+  return topics.map((topic: any) => ({
     params: { id: topic.id },
     props: { topic },
   }));
 }
 
-const { topic } = Astro.props;
+const { topic } = Astro.props as {
+  topic: {
+    id: string; name: string; type: string; description: string;
+    active: boolean; startDate?: string; endDate?: string;
+    sources: Array<{id: string; name: string; url: string; frequency: string}>;
+  }
+};
 
-// 读取所有新闻并过滤出该板块的
 const newsData = await getCollection('daily-news');
 const dateEntries = newsData.filter(entry => entry.id !== 'topics');
+dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
 
-// 收集该板块的所有新闻，按日期分组
-const entriesByDate = new Map<string, typeof dateEntries[0]['data']['items']>();
+const url = new URL(Astro.request.url);
+const selectedDate = url.searchParams.get('date');
+const availableDates = dateEntries.map(e => e.data.date);
+const currentDate = selectedDate && availableDates.includes(selectedDate)
+  ? selectedDate
+  : (availableDates[0] || '');
+const currentEntry = dateEntries.find(e => e.data.date === currentDate);
+const currentItems = currentEntry?.data.items.filter(i => i.topic === topic.id) || [];
+
+// 跨日期取该板块所有新闻（用于 top10）
+const allTopicItems: Array<{item: typeof currentItems[0]; date: string}> = [];
 for (const entry of dateEntries) {
-  const items = entry.data.items.filter(item => item.topic === topic.id);
-  if (items.length > 0) {
-    entriesByDate.set(entry.data.date, items);
+  for (const item of entry.data.items) {
+    if (item.topic === topic.id) {
+      allTopicItems.push({ item, date: entry.data.date });
+    }
   }
 }
+allTopicItems.sort((a, b) => b.date.localeCompare(a.date));
 
-// 日期降序
-const sortedDates = Array.from(entriesByDate.keys()).sort((a, b) => b.localeCompare(a));
-const totalCount = sortedDates.reduce((sum, date) => sum + (entriesByDate.get(date)?.length || 0), 0);
+// top10：去重 + 取前10
+const seen = new Set();
+const top10 = [];
+for (const { item } of allTopicItems) {
+  if (!seen.has(item.title)) {
+    seen.add(item.title);
+    top10.push(item);
+  }
+  if (top10.length >= 10) break;
+}
+
+// 按来源分组（仅当天）
+const sourceGroups = new Map<string, typeof currentItems>();
+for (const item of currentItems) {
+  if (!sourceGroups.has(item.source)) {
+    sourceGroups.set(item.source, []);
+  }
+  sourceGroups.get(item.source)!.push(item);
+}
+
+// 来源排序：按 topics.json 中的顺序（已按 frequency 排好）
+const orderedSources = topic.sources || [];
+const freqOrder = { high: 0, medium: 1, low: 2 };
+const sortedSources = [...orderedSources].sort((a, b) => {
+  return (freqOrder as any)[a.frequency] - (freqOrder as any)[b.frequency];
+});
 ---
 
-<BaseLayout title={`${topic.name} - 新闻归档 - AK22AK`} description={`AK22AK 关注的 ${topic.name} 资讯归档`}>
-  <div style="margin-bottom: 1.5rem;">
-    <a href="/daily-news/" style="color: #888;">← 返回新闻首页</a>
-  </div>
+<BaseLayout title={`${topic.name} - 新闻详情 - AK22AK`} description={`AK22AK 关注的 ${topic.name} 资讯详情`}>
+  <div class="daily-news-layout">
+    <!-- 左侧来源导航 -->
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <div style="margin-bottom: 1rem;">
+          <a href="/daily-news/" style="color: #888; font-size: 0.85rem;">← 返回首页</a>
+        </div>
+        <h3 class="sidebar-title">📖 来源导航</h3>
+        <nav class="sidebar-nav">
+          <a href="#top10" class="sidebar-link">
+            <span class="sidebar-icon">🔥</span>
+            <span class="sidebar-name">热门 TOP10</span>
+          </a>
+          {sortedSources.map(src => {
+            const count = sourceGroups.get(src.id)?.length || 0;
+            return (
+              <a href={`#src-${src.id}`} class="sidebar-link">
+                <span class="sidebar-name">{src.name}</span>
+                {count > 0 && <span class="sidebar-count">{count}</span>}
+              </a>
+            );
+          })}
+        </nav>
+      </div>
+    </aside>
 
-  <NewsTopicNav currentTopic={topic.id} />
+    <!-- 主内容区 -->
+    <main class="daily-main">
+      <!-- 日期切换 -->
+      <div class="date-list" style="margin-bottom: 1.5rem; justify-content: flex-start;">
+        {availableDates.map(date => (
+          <a
+            href={`/daily-news/topic/${topic.id}/?date=${date}`}
+            class={`date-pill ${date === currentDate ? 'active' : ''}`}
+          >
+            {date}
+          </a>
+        ))}
+      </div>
 
-  <div class="topic-hero">
-    <h1>{topic.name}</h1>
-    <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap;">
-      <span class={`topic-tag ${topic.type}`}>{topic.type === 'longterm' ? '长期板块' : '短期板块'}</span>
-      {!topic.active && <span class="topic-tag archived">已归档</span>}
-    </div>
-    <p style="color: #555; max-width: 600px;">{topic.description}</p>
-    {topic.type === 'shortterm' && (
-      <p style="color: #888; font-size: 0.85rem; margin-top: 0.5rem;">
-        时间范围：{topic.startDate} ~ {topic.endDate}
-      </p>
-    )}
-    <p style="color: #888; font-size: 0.85rem; margin-top: 0.25rem;">
-      共 {sortedDates.length} 天 · {totalCount} 条资讯
-    </p>
-  </div>
+      <!-- 板块信息卡 -->
+      <div class="topic-hero">
+        <h1>{topic.name}</h1>
+        <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap;">
+          <span class={`topic-tag ${topic.type}`}>{topic.type === 'longterm' ? '长期板块' : '短期板块'}</span>
+          {!topic.active && <span class="topic-tag archived">已归档</span>}
+        </div>
+        <p style="color: #555;">{topic.description}</p>
+        {topic.type === 'shortterm' && (
+          <p style="color: #888; font-size: 0.85rem; margin-top: 0.5rem;">
+            时间范围：{topic.startDate} ~ {topic.endDate}
+          </p>
+        )}
+      </div>
 
-  {sortedDates.length === 0 ? (
-    <div class="card">该板块暂无新闻数据。</div>
-  ) : (
-    <div class="timeline">
-      {sortedDates.map(date => {
-        const items = entriesByDate.get(date) || [];
+      <!-- TOP10 -->
+      <section id="top10" class="topic-section">
+        <div class="topic-section-header">
+          <h2>🔥 热门 TOP10</h2>
+        </div>
+        {top10.length > 0 ? (
+          <div class="topic-list">
+            {top10.map((item, idx) => (
+              <article class="topic-item">
+                <span class="item-rank">{idx + 1}</span>
+                <div class="item-body">
+                  <h3 class="item-title">
+                    <a href={item.url} target="_blank">{item.title}</a>
+                  </h3>
+                  <p class="item-summary">{item.summary}</p>
+                  <span class="item-source">{item.source}</span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div class="topic-empty">暂无热门资讯</div>
+        )}
+      </section>
+
+      <!-- 分来源展示 -->
+      {sortedSources.map(src => {
+        const items = sourceGroups.get(src.id) || [];
+        const displayItems = items.slice(0, 5);
         return (
-          <div class="timeline-date">
-            <div class="timeline-dot" />
-            <div class="timeline-content">
-              <h3 class="timeline-date-title">{date}</h3>
-              <div class="card" style="padding: 0; margin-top: 0.5rem;">
-                {items.map((item, idx) => (
-                  <div class="news-item" style={idx === items.length - 1 ? 'border-bottom: none;' : ''}>
-                    <h3 style="font-size: 1rem;"><a href={item.url} target="_blank">{item.title}</a></h3>
-                    <p>{item.summary}</p>
-                    <div class="source">来源：{item.source}</div>
-                  </div>
+          <section id={`src-${src.id}`} class="topic-section">
+            <div class="topic-section-header">
+              <h2>{src.name}</h2>
+              <a href={src.url} target="_blank" class="source-home-link">
+                访问官网 ↗
+              </a>
+            </div>
+            {displayItems.length > 0 ? (
+              <div class="topic-list">
+                {displayItems.map(item => (
+                  <article class="topic-item">
+                    <div class="item-body" style="margin-left: 0;">
+                      <h3 class="item-title">
+                        <a href={item.url} target="_blank">{item.title}</a>
+                      </h3>
+                      <p class="item-summary">{item.summary}</p>
+                    </div>
+                  </article>
                 ))}
               </div>
-            </div>
-          </div>
+            ) : (
+              <div class="topic-empty">当日暂无 {src.name} 资讯</div>
+            )}
+          </section>
         );
       })}
-    </div>
-  )}
+    </main>
+  </div>
 </BaseLayout>
+
+<script>
+  document.querySelectorAll('.sidebar-link[href^="#"]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(link.getAttribute('href')!);
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+
+  const sections = document.querySelectorAll('section[id]');
+  const sidebarLinks = document.querySelectorAll('.sidebar-link[href^="#"]');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        sidebarLinks.forEach(link => link.classList.remove('active'));
+        const activeLink = document.querySelector(`.sidebar-link[href="#${entry.target.id}"]`);
+        if (activeLink) activeLink.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -60% 0px' });
+  sections.forEach(section => observer.observe(section));
+</script>

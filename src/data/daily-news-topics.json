@@ -5,14 +5,73 @@
       "name": "科技",
       "type": "longterm",
       "description": "AI、软件、硬件等科技动态",
-      "active": true
+      "active": true,
+      "sources": [
+        {
+          "id": "cnbeta",
+          "name": "cnBeta",
+          "url": "https://www.cnbeta.com",
+          "frequency": "high",
+          "rss": "https://www.cnbeta.com/backend.php"
+        },
+        {
+          "id": "ithome",
+          "name": "IT之家",
+          "url": "https://www.ithome.com",
+          "frequency": "high",
+          "rss": "https://www.ithome.com/rss/"
+        },
+        {
+          "id": "sspai",
+          "name": "少数派",
+          "url": "https://sspai.com",
+          "frequency": "medium",
+          "rss": "https://sspai.com/feed"
+        },
+        {
+          "id": "ifanr",
+          "name": "爱范儿",
+          "url": "https://www.ifanr.com",
+          "frequency": "medium",
+          "rss": "https://www.ifanr.com/feed"
+        },
+        {
+          "id": "36kr",
+          "name": "36kr",
+          "url": "https://36kr.com",
+          "frequency": "medium",
+          "rss": "https://36kr.com/feed"
+        },
+        {
+          "id": "solidot",
+          "name": "Solidot",
+          "url": "https://www.solidot.org",
+          "frequency": "medium",
+          "rss": "https://www.solidot.org/index.rss"
+        },
+        {
+          "id": "ruanyifeng",
+          "name": "阮一峰",
+          "url": "https://www.ruanyifeng.com/blog",
+          "frequency": "low",
+          "rss": "https://www.ruanyifeng.com/blog/atom.xml"
+        },
+        {
+          "id": "catcoding",
+          "name": "程序员的喵",
+          "url": "https://catcoding.me",
+          "frequency": "low",
+          "rss": "https://catcoding.me/atom.xml"
+        }
+      ]
     },
     {
       "id": "game",
       "name": "游戏",
       "type": "longterm",
       "description": "游戏行业资讯与新品发布",
-      "active": true
+      "active": true,
+      "sources": []
     },
     {
       "id": "snooker",
@@ -21,7 +80,8 @@
       "description": "2025 斯诺克世锦赛赛况追踪",
       "startDate": "2025-04-19",
       "endDate": "2025-05-05",
-      "active": true
+      "active": true,
+      "sources": []
     }
   ]
 }
