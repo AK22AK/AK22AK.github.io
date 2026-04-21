@@ -1,4 +1,6 @@
 ---
+import Ginger from './Ginger.astro';
+
 const navItems = [
   { href: '/', label: '首页' },
   { href: '/about', label: '关于' },
@@ -10,7 +12,7 @@ const navItems = [
 
 <header class="header">
   <div class="container header-inner">
-    <a href="/" class="logo">AK22AK<span class="ginger-mark" aria-hidden="true"><span class="ginger-inner">🫚</span></span></a>
+    <a href="/" class="logo">AK22AK<Ginger /></a>
     <nav class="nav">
       {navItems.map(item => (
         <a href={item.href}>{item.label}</a>
