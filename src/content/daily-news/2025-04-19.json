@@ -1,0 +1,26 @@
+{
+  "date": "2025-04-19",
+  "items": [
+    {
+      "title": "苹果 WWDC 2025 定档 6 月",
+      "summary": "苹果宣布 WWDC 2025 将于 6 月 9 日开幕，预计发布 iOS 19 和新版 AI 功能。",
+      "url": "https://www.apple.com",
+      "source": "Apple",
+      "topic": "tech"
+    },
+    {
+      "title": "《黑神话：悟空》DLC 开发中",
+      "summary": "游戏科学确认《黑神话：悟空》首个大型 DLC 正在全力开发中，预计明年上线。",
+      "url": "https://www.heishenhua.com",
+      "source": "游戏科学",
+      "topic": "game"
+    },
+    {
+      "title": "斯诺克世锦赛首轮：丁俊晖惜败",
+      "summary": "2025 斯诺克世锦赛首轮，丁俊晖与对手战至决胜局，最终惜败无缘晋级。",
+      "url": "https://www.worldsnooker.com",
+      "source": "世界斯诺克官网",
+      "topic": "snooker"
+    }
+  ]
+}

@@ -5,19 +5,43 @@
       "title": "GitHub Copilot 推出新的 Agent 模式",
       "summary": "GitHub 宣布 Copilot 新增 Agent 模式，可以自主执行多步骤编程任务，引发开发者社区热议。",
       "url": "https://github.blog",
-      "source": "GitHub Blog"
+      "source": "GitHub Blog",
+      "topic": "tech"
     },
     {
       "title": "Astro 6.0 正式发布",
       "summary": "Astro 发布 6.0 版本，带来更快的构建速度和更完善的内容集合支持。",
       "url": "https://astro.build",
-      "source": "Astro 官方"
+      "source": "Astro 官方",
+      "topic": "tech"
     },
     {
       "title": "OpenAI 发布 GPT-4.1 系列模型",
       "summary": "新一代模型在代码能力和长上下文处理上有显著提升，API 定价更加亲民。",
       "url": "https://openai.com",
-      "source": "OpenAI"
+      "source": "OpenAI",
+      "topic": "tech"
+    },
+    {
+      "title": "《塞尔达传说》新作确定发售日",
+      "summary": "任天堂宣布《塞尔达传说》系列最新作将于今年冬季发售，支持中文语音。",
+      "url": "https://www.nintendo.com",
+      "source": "任天堂官方",
+      "topic": "game"
+    },
+    {
+      "title": "Steam 同时在线人数突破 4000 万",
+      "summary": "Steam 平台再创历史新高，同时在线玩家数首次突破 4000 万大关。",
+      "url": "https://store.steampowered.com",
+      "source": "Steam",
+      "topic": "game"
+    },
+    {
+      "title": "赵心童挺进斯诺克世锦赛八强",
+      "summary": "2025 斯诺克世锦赛继续进行，中国选手赵心童状态出色，连克强敌挺进八强。",
+      "url": "https://www.worldsnooker.com",
+      "source": "世界斯诺克官网",
+      "topic": "snooker"
     }
   ]
 }

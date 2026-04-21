@@ -22,6 +22,7 @@ const dailyNews = defineCollection({
         summary: z.string(),
         url: z.string().url(),
         source: z.string(),
+        topic: z.string(),
       })
     ),
   }),

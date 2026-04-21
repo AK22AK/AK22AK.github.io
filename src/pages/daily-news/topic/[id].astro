@@ -1,0 +1,91 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import NewsTopicNav from '../../../components/NewsTopicNav.astro';
+import { getCollection } from 'astro:content';
+import fs from 'node:fs';
+import path from 'node:path';
+
+export async function getStaticPaths() {
+  const topicsPath = path.resolve('./src/data/daily-news-topics.json');
+  const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
+  const topics = topicsConfig.topics as Array<{
+    id: string; name: string; type: string; description: string;
+    active: boolean; startDate?: string; endDate?: string;
+  }>;
+  return topics.map(topic => ({
+    params: { id: topic.id },
+    props: { topic },
+  }));
+}
+
+const { topic } = Astro.props;
+
+// 读取所有新闻并过滤出该板块的
+const newsData = await getCollection('daily-news');
+const dateEntries = newsData.filter(entry => entry.id !== 'topics');
+
+// 收集该板块的所有新闻，按日期分组
+const entriesByDate = new Map<string, typeof dateEntries[0]['data']['items']>();
+for (const entry of dateEntries) {
+  const items = entry.data.items.filter(item => item.topic === topic.id);
+  if (items.length > 0) {
+    entriesByDate.set(entry.data.date, items);
+  }
+}
+
+// 日期降序
+const sortedDates = Array.from(entriesByDate.keys()).sort((a, b) => b.localeCompare(a));
+const totalCount = sortedDates.reduce((sum, date) => sum + (entriesByDate.get(date)?.length || 0), 0);
+---
+
+<BaseLayout title={`${topic.name} - 新闻归档 - AK22AK`} description={`AK22AK 关注的 ${topic.name} 资讯归档`}>
+  <div style="margin-bottom: 1.5rem;">
+    <a href="/daily-news/" style="color: #888;">← 返回新闻首页</a>
+  </div>
+
+  <NewsTopicNav currentTopic={topic.id} />
+
+  <div class="topic-hero">
+    <h1>{topic.name}</h1>
+    <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap;">
+      <span class={`topic-tag ${topic.type}`}>{topic.type === 'longterm' ? '长期板块' : '短期板块'}</span>
+      {!topic.active && <span class="topic-tag archived">已归档</span>}
+    </div>
+    <p style="color: #555; max-width: 600px;">{topic.description}</p>
+    {topic.type === 'shortterm' && (
+      <p style="color: #888; font-size: 0.85rem; margin-top: 0.5rem;">
+        时间范围：{topic.startDate} ~ {topic.endDate}
+      </p>
+    )}
+    <p style="color: #888; font-size: 0.85rem; margin-top: 0.25rem;">
+      共 {sortedDates.length} 天 · {totalCount} 条资讯
+    </p>
+  </div>
+
+  {sortedDates.length === 0 ? (
+    <div class="card">该板块暂无新闻数据。</div>
+  ) : (
+    <div class="timeline">
+      {sortedDates.map(date => {
+        const items = entriesByDate.get(date) || [];
+        return (
+          <div class="timeline-date">
+            <div class="timeline-dot" />
+            <div class="timeline-content">
+              <h3 class="timeline-date-title">{date}</h3>
+              <div class="card" style="padding: 0; margin-top: 0.5rem;">
+                {items.map((item, idx) => (
+                  <div class="news-item" style={idx === items.length - 1 ? 'border-bottom: none;' : ''}>
+                    <h3 style="font-size: 1rem;"><a href={item.url} target="_blank">{item.title}</a></h3>
+                    <p>{item.summary}</p>
+                    <div class="source">来源：{item.source}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  )}
+</BaseLayout>

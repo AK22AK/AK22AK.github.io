@@ -1,51 +1,122 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import NewsTopicNav from '../../components/NewsTopicNav.astro';
 import { getCollection } from 'astro:content';
+import fs from 'node:fs';
+import path from 'node:path';
 
+// 读取板块配置
+const topicsPath = path.resolve('./src/data/daily-news-topics.json');
+const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
+const topics = topicsConfig.topics as Array<{
+  id: string; name: string; type: string; description: string;
+  active: boolean; startDate?: string; endDate?: string;
+}>;
+
+// 读取所有新闻数据
 const newsData = await getCollection('daily-news');
+// 过滤掉 topics.json（它会被 glob 匹配到因为也是 json）
+const dateEntries = newsData.filter(entry => entry.id !== 'topics');
 // 按日期降序排列
-newsData.sort((a, b) => b.data.date.localeCompare(a.data.date));
-const latest = newsData[0];
+dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
+
+// 获取 URL 参数中的日期
+const url = new URL(Astro.request.url);
+const selectedDate = url.searchParams.get('date');
+
+// 确定当前展示的日期
+const availableDates = dateEntries.map(e => e.data.date);
+const currentDate = selectedDate && availableDates.includes(selectedDate)
+  ? selectedDate
+  : (availableDates[0] || '');
+
+// 当前日期的新闻条目
+const currentEntry = dateEntries.find(e => e.data.date === currentDate);
+const currentItems = currentEntry?.data.items || [];
+
+// 活跃板块
+const activeTopics = topics.filter(t => t.active);
+
+// 按板块分组当前新闻
+const itemsByTopic = new Map<string, typeof currentItems>();
+for (const topic of activeTopics) {
+  itemsByTopic.set(topic.id, currentItems.filter(item => item.topic === topic.id));
+}
+
+// 归档的短期板块
+const archivedTopics = topics.filter(t => t.type === 'shortterm' && !t.active);
 ---
 
-<BaseLayout title="每日新闻 - AK22AK" description="AK22AK 关注的每日技术资讯">
+<BaseLayout title="每日新闻 - AK22AK" description="AK22AK 关注的每日资讯聚合">
   <h1>📰 每日新闻</h1>
+  <NewsTopicNav />
   <p style="color: #666; margin-bottom: 1.5rem;">
-    这里聚合了我关注的技术与行业资讯。数据可通过 GitHub Actions 每日自动更新。
+    聚合我关注的多领域资讯，板块可动态调整。数据每日自动更新。
   </p>
 
-  {latest ? (
-    <section>
-      <h2 style="margin-bottom: 1rem;">📅 {latest.data.date}</h2>
-      <div class="card" style="padding: 0;">
-        {latest.data.items.map((item, idx) => (
-          <div class="news-item" style={idx === latest.data.items.length - 1 ? 'border-bottom: none;' : ''}>
-            <h3>
-              <a href={item.url} target="_blank">{item.title}</a>
-            </h3>
-            <p>{item.summary}</p>
-            <div class="source">来源：{item.source}</div>
+  <!-- 日期切换器 -->
+  <div class="date-switcher">
+    <span class="date-label">📅 日期：</span>
+    <div class="date-list">
+      {availableDates.map(date => (
+        <a
+          href={`/daily-news/?date=${date}`}
+          class={`date-pill ${date === currentDate ? 'active' : ''}`}
+        >
+          {date}
+        </a>
+      ))}
+    </div>
+  </div>
+
+  <!-- 活跃板块新闻 -->
+  {activeTopics.map(topic => {
+    const items = itemsByTopic.get(topic.id) || [];
+    return (
+      <section class="topic-section">
+        <div class="topic-header">
+          <h2>{topic.name}</h2>
+          <span class={`topic-tag ${topic.type}`}>{topic.type === 'longterm' ? '长期' : '短期'}</span>
+          <a href={`/daily-news/topic/${topic.id}/`} class="topic-more">查看全部 →</a>
+        </div>
+        <p class="topic-desc">{topic.description}</p>
+
+        {items.length > 0 ? (
+          <div class="card" style="padding: 0;">
+            {items.map((item, idx) => (
+              <div class="news-item" style={idx === items.length - 1 ? 'border-bottom: none;' : ''}>
+                <h3><a href={item.url} target="_blank">{item.title}</a></h3>
+                <p>{item.summary}</p>
+                <div class="source">来源：{item.source}</div>
+              </div>
+            ))}
           </div>
+        ) : (
+          <div class="card" style="color: #888; padding: 1.25rem;">
+            当日暂无 {topic.name} 资讯
+          </div>
+        )}
+      </section>
+    );
+  })}
+
+  <!-- 底部导航 -->
+  <div style="margin-top: 2.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+    <a href="/daily-news/archive/" class="btn">📂 查看全部归档</a>
+  </div>
+
+  {archivedTopics.length > 0 && (
+    <section style="margin-top: 2rem;">
+      <h2>🗄 已归档板块</h2>
+      <div class="project-grid">
+        {archivedTopics.map(topic => (
+          <a href={`/daily-news/topic/${topic.id}/`} class="card" style="text-decoration: none; color: inherit;">
+            <h3>{topic.name}</h3>
+            <p style="color: #888; font-size: 0.9rem;">{topic.description}</p>
+            <span class="topic-tag shortterm">已结束</span>
+          </a>
         ))}
       </div>
-    </section>
-  ) : (
-    <div class="card">
-      <p>暂无新闻数据。稍后将通过自动化脚本更新。</p>
-    </div>
-  )}
-
-  {newsData.length > 1 && (
-    <section style="margin-top: 2rem;">
-      <h2>📂 历史归档</h2>
-      <ul class="post-list">
-        {newsData.slice(1).map(entry => (
-          <li>
-            <span style="font-weight: 600;">{entry.data.date}</span>
-            <span style="color: #888; margin-left: 0.5rem;">({entry.data.items.length} 条)</span>
-          </li>
-        ))}
-      </ul>
     </section>
   )}
 </BaseLayout>

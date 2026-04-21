@@ -1,0 +1,41 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+
+const topicsPath = path.resolve('./src/data/daily-news-topics.json');
+const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
+const topics = topicsConfig.topics as Array<{
+  id: string; name: string; type: string; active: boolean;
+}>;
+
+const activeTopics = topics.filter(t => t.active);
+const archivedTopics = topics.filter(t => !t.active);
+
+interface Props {
+  currentTopic?: string;
+}
+
+const { currentTopic } = Astro.props;
+const currentPath = Astro.url.pathname;
+---
+
+<nav class="topic-nav">
+  <div class="topic-nav-inner">
+    <a href="/daily-news/" class={`topic-nav-item ${currentPath === '/daily-news/' || currentPath === '/daily-news' ? 'active' : ''}`}>
+      📰 全部
+    </a>
+    {activeTopics.map(topic => (
+      <a
+        href={`/daily-news/topic/${topic.id}/`}
+        class={`topic-nav-item ${currentTopic === topic.id ? 'active' : ''}`}
+      >
+        {topic.name}
+      </a>
+    ))}
+    {archivedTopics.length > 0 && (
+      <a href="/daily-news/archive/" class={`topic-nav-item ${currentPath === '/daily-news/archive/' || currentPath === '/daily-news/archive' ? 'active' : ''}`}>
+        🗄 归档
+      </a>
+    )}
+  </div>
+</nav>

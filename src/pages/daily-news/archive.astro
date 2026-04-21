@@ -1,0 +1,108 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import NewsTopicNav from '../../components/NewsTopicNav.astro';
+import { getCollection } from 'astro:content';
+import fs from 'node:fs';
+import path from 'node:path';
+
+// 读取板块配置
+const topicsPath = path.resolve('./src/data/daily-news-topics.json');
+const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
+const topics = topicsConfig.topics as Array<{
+  id: string; name: string; type: string; description: string;
+  active: boolean; startDate?: string; endDate?: string;
+}>;
+
+// 读取所有新闻数据
+const newsData = await getCollection('daily-news');
+const dateEntries = newsData.filter(entry => entry.id !== 'topics');
+dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
+
+// 按年月分组
+const entriesByMonth = new Map<string, typeof dateEntries>();
+for (const entry of dateEntries) {
+  const month = entry.data.date.slice(0, 7); // YYYY-MM
+  if (!entriesByMonth.has(month)) {
+    entriesByMonth.set(month, []);
+  }
+  entriesByMonth.get(month)!.push(entry);
+}
+const sortedMonths = Array.from(entriesByMonth.keys()).sort((a, b) => b.localeCompare(a));
+
+// 板块统计
+const topicStats = topics.map(topic => {
+  let count = 0;
+  let days = 0;
+  for (const entry of dateEntries) {
+    const items = entry.data.items.filter(i => i.topic === topic.id);
+    if (items.length > 0) {
+      count += items.length;
+      days += 1;
+    }
+  }
+  return { ...topic, count, days };
+});
+---
+
+<BaseLayout title="新闻归档 - AK22AK" description="AK22AK 每日新闻全部历史归档">
+  <div style="margin-bottom: 1.5rem;">
+    <a href="/daily-news/" style="color: #888;">← 返回新闻首页</a>
+  </div>
+
+  <NewsTopicNav />
+
+  <h1>📂 新闻归档</h1>
+
+  <!-- 板块概览 -->
+  <section style="margin-bottom: 2.5rem;">
+    <h2>📑 板块概览</h2>
+    <div class="project-grid">
+      {topicStats.map(topic => (
+        <a href={`/daily-news/topic/${topic.id}/`} class="card" style="text-decoration: none; color: inherit;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+            <h3 style="margin: 0;">{topic.name}</h3>
+            <span class={`topic-tag ${topic.type}`} style={topic.active ? '' : 'opacity: 0.6;'}>
+              {topic.type === 'longterm' ? '长期' : '短期'}
+            </span>
+          </div>
+          <p style="color: #888; font-size: 0.9rem; margin-bottom: 0.75rem;">{topic.description}</p>
+          <div style="display: flex; gap: 1rem; color: #888; font-size: 0.8rem;">
+            <span>{topic.days} 天有更新</span>
+            <span>{topic.count} 条资讯</span>
+          </div>
+          {!topic.active && (
+            <span class="topic-tag archived" style="margin-top: 0.5rem; display: inline-block;">已归档</span>
+          )}
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <!-- 按月分组的历史日期 -->
+  <section>
+    <h2>🗓 历史日期</h2>
+    {sortedMonths.map(month => {
+      const entries = entriesByMonth.get(month) || [];
+      return (
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="color: #555; font-size: 1rem; margin-bottom: 0.5rem;">{month}</h3>
+          <div style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+            {entries.map(entry => {
+              const day = entry.data.date.slice(8);
+              const count = entry.data.items.length;
+              return (
+                <a
+                  href={`/daily-news/?date=${entry.data.date}`}
+                  class="date-pill"
+                  style="text-decoration: none;"
+                >
+                  {day}日 ({count}条)
+                </a>
+              );
+            })}
+          </div>
+        </div>
+      );
+    })}
+  </section>
+</BaseLayout>

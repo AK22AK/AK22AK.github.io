@@ -1,0 +1,27 @@
+{
+  "topics": [
+    {
+      "id": "tech",
+      "name": "科技",
+      "type": "longterm",
+      "description": "AI、软件、硬件等科技动态",
+      "active": true
+    },
+    {
+      "id": "game",
+      "name": "游戏",
+      "type": "longterm",
+      "description": "游戏行业资讯与新品发布",
+      "active": true
+    },
+    {
+      "id": "snooker",
+      "name": "斯诺克世锦赛",
+      "type": "shortterm",
+      "description": "2025 斯诺克世锦赛赛况追踪",
+      "startDate": "2025-04-19",
+      "endDate": "2025-05-05",
+      "active": true
+    }
+  ]
+}
