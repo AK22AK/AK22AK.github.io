@@ -29,7 +29,6 @@ dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
 
 const url = new URL(Astro.request.url);
 const selectedDate = url.searchParams.get('date');
-const selectedSource = url.searchParams.get('source');
 const availableDates = dateEntries.map(e => e.data.date);
 const currentDate = selectedDate && availableDates.includes(selectedDate)
   ? selectedDate
@@ -143,7 +142,6 @@ function getDisplayedItems(sourceId: string, targetCount: number = 5): DisplayRe
     };
   }
 
-  // 从前一天补充
   const prevEntry = dateEntries[1];
   let fallbackItems: typeof currentItems = [];
   if (prevEntry) {
@@ -163,16 +161,26 @@ function getDisplayedItems(sourceId: string, targetCount: number = 5): DisplayRe
   };
 }
 
-// 来源详情模式
-const sourceDetail = selectedSource ? sortedSources.find(s => s.id === selectedSource) : null;
-const detailItems = sourceDetail ? currentItems.filter(i => i.source === sourceDetail.id) : [];
-const detailFallback: typeof currentItems = [];
-if (sourceDetail && detailItems.length < 5 && dateEntries[1]) {
-  const prevItems = dateEntries[1].data.items
-    .filter(i => i.source === sourceDetail.id && i.topic === topic.id)
-    .sort((a, b) => (b.pub_time || '').localeCompare(a.pub_time || ''));
-  detailFallback.push(...prevItems.slice(0, 5 - detailItems.length));
-}
+// 为每个来源预计算详情数据
+type SourceDetail = {
+  id: string;
+  name: string;
+  url: string;
+  todayItems: typeof currentItems;
+  fallbackItems: typeof currentItems;
+};
+
+const sourceDetails: SourceDetail[] = sortedSources.map(src => {
+  const todayItems = currentItems.filter(i => i.source === src.id);
+  let fallbackItems: typeof currentItems = [];
+  if (todayItems.length < 5 && dateEntries[1]) {
+    const prevItems = dateEntries[1].data.items
+      .filter(i => i.source === src.id && i.topic === topic.id)
+      .sort((a, b) => (b.pub_time || '').localeCompare(a.pub_time || ''));
+    fallbackItems = prevItems.slice(0, 5 - todayItems.length);
+  }
+  return { id: src.id, name: src.name, url: src.url, todayItems, fallbackItems };
+});
 ---
 
 <BaseLayout title={`${topic.name} - 新闻详情 - AK22AK`} description={`AK22AK 关注的 ${topic.name} 资讯详情`} variant="news">
@@ -181,30 +189,25 @@ if (sourceDetail && detailItems.length < 5 && dateEntries[1]) {
     <aside class="sidebar">
       <div class="sidebar-inner">
         <div style="margin-bottom: 1rem;">
-          {sourceDetail ? (
-            <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`} style="color: #888; font-size: 0.85rem;">← 返回 {topic.name} 概览</a>
-          ) : (
-            <a href="/daily-news/" style="color: #888; font-size: 0.85rem;">← 返回新闻首页</a>
-          )}
+          <a href="/daily-news/" class="back-link">← 返回新闻首页</a>
+          <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`} class="back-link" id="back-to-overview" style="display: none;">← 返回 {topic.name} 概览</a>
         </div>
-        <h3 class="sidebar-title">📖 {sourceDetail ? sourceDetail.name : '来源导航'}</h3>
-        <nav class="sidebar-nav">
-          {!sourceDetail && (
-            <a href="#top10" class="sidebar-link">
-              <span class="sidebar-icon">🔥</span>
-              <span class="sidebar-name">热门 TOP10</span>
-            </a>
-          )}
+        <h3 class="sidebar-title" id="sidebar-title">📖 来源导航</h3>
+        <nav class="sidebar-nav" id="sidebar-nav">
+          <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`} class="sidebar-link" id="nav-overview">
+            <span class="sidebar-icon">📊</span>
+            <span class="sidebar-name">概览</span>
+          </a>
           {sortedSources.map(src => {
-            const isActive = sourceDetail?.id === src.id;
             const count = sourceGroups.get(src.id)?.length || 0;
             return (
               <a
                 href={`/daily-news/topic/${topic.id}/?source=${src.id}&date=${currentDate}`}
-                class={`sidebar-link ${isActive ? 'active' : ''}`}
+                class="sidebar-link nav-source"
+                data-source={src.id}
               >
                 <span class="sidebar-name">{src.name}</span>
-                {!sourceDetail && count > 0 && <span class="sidebar-count">{count}</span>}
+                <span class="sidebar-count" data-count={count}>{count > 0 ? count : ''}</span>
               </a>
             );
           })}
@@ -219,8 +222,9 @@ if (sourceDetail && detailItems.length < 5 && dateEntries[1]) {
       <div class="date-list" style="margin-bottom: 1.5rem; justify-content: flex-start;">
         {availableDates.map(date => (
           <a
-            href={`/daily-news/topic/${topic.id}/?date=${date}${sourceDetail ? `&source=${sourceDetail.id}` : ''}`}
-            class={`date-pill ${date === currentDate ? 'active' : ''}`}
+            href={`/daily-news/topic/${topic.id}/?date=${date}`}
+            class={`date-pill date-nav ${date === currentDate ? 'active' : ''}`}
+            data-date={date}
           >
             {date}
           </a>
@@ -229,45 +233,35 @@ if (sourceDetail && detailItems.length < 5 && dateEntries[1]) {
 
       <!-- 板块信息卡 -->
       <div class="topic-hero">
-        <h1>
-          {sourceDetail ? `${sourceDetail.name} — ${topic.name}` : topic.name}
-        </h1>
+        <h1 id="page-title">{topic.name}</h1>
         <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap;">
           <span class={`topic-tag ${topic.type}`}>{topic.type === 'longterm' ? '长期板块' : '短期板块'}</span>
           {!topic.active && <span class="topic-tag archived">已归档</span>}
-          {sourceDetail && detailFallback.length > 0 && (
-            <span style="font-size: 0.75rem; color: #888;">含 {detailFallback.length} 条昨日补充</span>
-          )}
         </div>
 
-        {topic.type === 'shortterm' && !sourceDetail && (
+        {topic.type === 'shortterm' && (
           <p style="color: #888; font-size: 0.85rem; margin-top: 0.5rem;">
             时间范围：{topic.startDate} ~ {topic.endDate}
           </p>
         )}
       </div>
 
-      {sourceDetail ? (
-        <!-- 来源详情模式：展示该来源全部列表 -->
-        <section class="topic-section">
+      <!-- ===== 概览视图 ===== -->
+      <div id="overview-view">
+        <!-- TOP10 -->
+        <section id="top10" class="topic-section">
           <div class="topic-section-header">
-            <h2>
-              {currentDate.replace(/-/g, '.')} 全部资讯
-              <span style="font-size: 0.8rem; color: #888; font-weight: 400; margin-left: 0.5rem;">
-                共 {detailItems.length + detailFallback.length} 条
-              </span>
-            </h2>
+            <h2>🔥 热门 TOP10</h2>
           </div>
-          {detailItems.length > 0 || detailFallback.length > 0 ? (
+          {top10.length > 0 ? (
             <div class="topic-list">
-              {[...detailItems, ...detailFallback].map((item, idx) => (
+              {top10.map((item, idx) => (
                 <article class="topic-item">
-                  <div class="item-body" style="margin-left: 0;">
+                  <span class="item-rank">{idx + 1}</span>
+                  <div class="item-body">
                     <h3 class="item-title">
                       <a href={item.url} target="_blank">{item.title}</a>
-                      {idx >= detailItems.length && (
-                        <span class="item-source" style="background: #fef3c7; color: #92400e;">昨日</span>
-                      )}
+                      <span class="item-source">{item.source}</span>
                     </h3>
                     <p class="item-summary">{item.summary}</p>
                   </div>
@@ -275,109 +269,195 @@ if (sourceDetail && detailItems.length < 5 && dateEntries[1]) {
               ))}
             </div>
           ) : (
-            <div class="topic-empty">当日暂无 {sourceDetail.name} 资讯</div>
+            <div class="topic-empty">暂无热门资讯</div>
           )}
-          <div style="margin-top: 1.5rem; text-align: center;">
-            <a href={sourceDetail.url} target="_blank" class="btn" style="background: #fff; color: #2563eb; border: 1px solid #2563eb;">
-              访问 {sourceDetail.name} 官网 ↗
-            </a>
-          </div>
         </section>
-      ) : (
-        <>
-          <!-- TOP10 -->
-          <section id="top10" class="topic-section">
-            <div class="topic-section-header">
-              <h2>🔥 热门 TOP10</h2>
-            </div>
-            {top10.length > 0 ? (
-              <div class="topic-list">
-                {top10.map((item, idx) => (
-                  <article class="topic-item">
-                    <span class="item-rank">{idx + 1}</span>
-                    <div class="item-body">
-                      <h3 class="item-title">
-                        <a href={item.url} target="_blank">{item.title}</a>
-                        <span class="item-source">{item.source}</span>
-                      </h3>
-                      <p class="item-summary">{item.summary}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div class="topic-empty">暂无热门资讯</div>
-            )}
-          </section>
 
-          <!-- 分来源展示 -->
-          {sortedSources.map(src => {
-            const { items, hasMore, allItems, fallbackCount } = getDisplayedItems(src.id, 5);
-            const todayCount = allItems.length;
-            return (
-              <section id={`src-${src.id}`} class="topic-section">
-                <div class="topic-section-header">
-                  <h2>
-                    {src.name}
-                    {fallbackCount > 0 && (
-                      <span style="font-size: 0.75rem; color: #888; font-weight: 400; margin-left: 0.5rem;">
-                        含 {fallbackCount} 条昨日补充
-                      </span>
-                    )}
-                  </h2>
-                  <a href={`/daily-news/topic/${topic.id}/?source=${src.id}&date=${currentDate}`} class="source-home-link">
-                    查看全部 {todayCount} 条 →
-                  </a>
+        <!-- 分来源展示 -->
+        {sortedSources.map(src => {
+          const { items, hasMore, allItems, fallbackCount } = getDisplayedItems(src.id, 5);
+          const todayCount = allItems.length;
+          return (
+            <section id={`src-${src.id}`} class="topic-section source-section" data-source={src.id}>
+              <div class="topic-section-header">
+                <h2>
+                  {src.name}
+                  {fallbackCount > 0 && (
+                    <span style="font-size: 0.75rem; color: #888; font-weight: 400; margin-left: 0.5rem;">
+                      含 {fallbackCount} 条昨日补充
+                    </span>
+                  )}
+                </h2>
+                <a href={`/daily-news/topic/${topic.id}/?source=${src.id}&date=${currentDate}`} class="source-home-link">
+                  查看全部 {todayCount} 条 →
+                </a>
+              </div>
+              {items.length > 0 ? (
+                <div class="topic-list">
+                  {items.map(item => (
+                    <article class="topic-item">
+                      <div class="item-body" style="margin-left: 0;">
+                        <h3 class="item-title">
+                          <a href={item.url} target="_blank">{item.title}</a>
+                        </h3>
+                        <p class="item-summary">{item.summary}</p>
+                      </div>
+                    </article>
+                  ))}
                 </div>
-                {items.length > 0 ? (
-                  <div class="topic-list">
-                    {items.map(item => (
-                      <article class="topic-item">
-                        <div class="item-body" style="margin-left: 0;">
-                          <h3 class="item-title">
-                            <a href={item.url} target="_blank">{item.title}</a>
-                          </h3>
-                          <p class="item-summary">{item.summary}</p>
-                        </div>
-                      </article>
-                    ))}
-                  </div>
-                ) : (
-                  <div class="topic-empty">当日暂无 {src.name} 资讯</div>
-                )}
-                <div style="margin-top: 0.75rem; text-align: right;">
-                  <a href={src.url} target="_blank" style="color: #888; font-size: 0.85rem;">
-                    访问 {src.name} 官网 ↗
-                  </a>
+              ) : (
+                <div class="topic-empty">当日暂无 {src.name} 资讯</div>
+              )}
+              <div style="margin-top: 0.75rem; text-align: right;">
+                <a href={src.url} target="_blank" style="color: #888; font-size: 0.85rem;">
+                  访问 {src.name} 官网 ↗
+                </a>
+              </div>
+            </section>
+          );
+        })}
+      </div>
+
+      <!-- ===== 来源详情视图容器（动态填充） ===== -->
+      <div id="source-detail-view" style="display: none;">
+        <div id="source-detail-content"></div>
+      </div>
+
+      <!-- 预渲染所有来源详情（隐藏，供 JS 复制） -->
+      <div style="display: none;" id="source-detail-templates">
+        {sourceDetails.map(src => (
+          <div data-source={src.id} class="source-detail-template">
+            <section class="topic-section">
+              <div class="topic-section-header">
+                <h2>
+                  {src.name}
+                  {src.fallbackItems.length > 0 && (
+                    <span style="font-size: 0.75rem; color: #888; font-weight: 400; margin-left: 0.5rem;">
+                      含 {src.fallbackItems.length} 条昨日补充
+                    </span>
+                  )}
+                </h2>
+              </div>
+              {[...src.todayItems, ...src.fallbackItems].length > 0 ? (
+                <div class="topic-list">
+                  {[...src.todayItems, ...src.fallbackItems].map((item, idx) => (
+                    <article class="topic-item">
+                      <div class="item-body" style="margin-left: 0;">
+                        <h3 class="item-title">
+                          <a href={item.url} target="_blank">{item.title}</a>
+                          {idx >= src.todayItems.length && (
+                            <span class="item-source" style="background: #fef3c7; color: #92400e;">昨日</span>
+                          )}
+                        </h3>
+                        <p class="item-summary">{item.summary}</p>
+                      </div>
+                    </article>
+                  ))}
                 </div>
-              </section>
-            );
-          })}
-        </>
-      )}
+              ) : (
+                <div class="topic-empty">当日暂无 {src.name} 资讯</div>
+              )}
+              <div style="margin-top: 1.5rem; text-align: center;">
+                <a href={src.url} target="_blank" class="btn" style="background: #fff; color: #2563eb; border: 1px solid #2563eb;">
+                  访问 {src.name} 官网 ↗
+                </a>
+              </div>
+            </section>
+          </div>
+        ))}
+      </div>
     </main>
   </div>
 </BaseLayout>
 
 <script>
-  document.querySelectorAll('.sidebar-link[href^="#"]').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const target = document.querySelector(link.getAttribute('href')!);
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  });
+  (function() {
+    function getSourceFromUrl() {
+      const url = new URL(window.location.href);
+      return url.searchParams.get('source');
+    }
 
-  const sections = document.querySelectorAll('section[id]');
-  const sidebarLinks = document.querySelectorAll('.sidebar-link[href^="#"]');
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        sidebarLinks.forEach(link => link.classList.remove('active'));
-        const activeLink = document.querySelector(`.sidebar-link[href="#${entry.target.id}"]`);
+    function updateDateNavLinks(source: string | null) {
+      document.querySelectorAll('.date-nav').forEach(el => {
+        const date = el.getAttribute('data-date');
+        const base = `/daily-news/topic/${location.pathname.split('/')[3]}/`;
+        if (source) {
+          el.setAttribute('href', `${base}?source=${source}&date=${date}`);
+        } else {
+          el.setAttribute('href', `${base}?date=${date}`);
+        }
+      });
+    }
+
+    function switchView() {
+      const source = getSourceFromUrl();
+      const overview = document.getElementById('overview-view');
+      const detailView = document.getElementById('source-detail-view');
+      const detailContent = document.getElementById('source-detail-content');
+      const backLink = document.querySelector('.back-link');
+      const backOverview = document.getElementById('back-to-overview');
+      const pageTitle = document.getElementById('page-title');
+      const sidebarTitle = document.getElementById('sidebar-title');
+      const navOverview = document.getElementById('nav-overview');
+
+      // 更新日期导航链接
+      updateDateNavLinks(source);
+
+      // 更新侧边栏高亮
+      document.querySelectorAll('.sidebar-link').forEach(link => link.classList.remove('active'));
+      if (source) {
+        const activeLink = document.querySelector(`.nav-source[data-source="${source}"]`);
         if (activeLink) activeLink.classList.add('active');
+      } else {
+        if (navOverview) navOverview.classList.add('active');
       }
-    });
-  }, { rootMargin: '-20% 0px -60% 0px' });
-  sections.forEach(section => observer.observe(section));
+
+      if (source && detailContent && detailView) {
+        // 显示来源详情
+        if (overview) overview.style.display = 'none';
+        detailView.style.display = 'block';
+
+        // 从模板复制内容
+        const template = document.querySelector(`#source-detail-templates .source-detail-template[data-source="${source}"]`);
+        if (template) {
+          detailContent.innerHTML = template.innerHTML;
+        } else {
+          detailContent.innerHTML = '<div class="topic-empty">未找到该来源</div>';
+        }
+
+        // 更新标题
+        const sourceName = document.querySelector(`.nav-source[data-source="${source}"] .sidebar-name`)?.textContent || source;
+        if (pageTitle) pageTitle.textContent = `${sourceName} — ${pageTitle.textContent.split('—')[1]?.trim() || '详情'}`;
+        if (sidebarTitle) sidebarTitle.textContent = `📖 ${sourceName}`;
+
+        // 切换返回按钮
+        if (backLink) (backLink as HTMLElement).style.display = 'none';
+        if (backOverview) backOverview.style.display = 'inline';
+      } else {
+        // 显示概览
+        if (overview) overview.style.display = 'block';
+        if (detailView) detailView.style.display = 'none';
+
+        // 恢复标题
+        if (pageTitle) pageTitle.textContent = pageTitle.getAttribute('data-original') || pageTitle.textContent.split('—')[0]?.trim() || '详情';
+        if (sidebarTitle) sidebarTitle.textContent = '📖 来源导航';
+
+        // 切换返回按钮
+        if (backLink) (backLink as HTMLElement).style.display = 'inline';
+        if (backOverview) backOverview.style.display = 'none';
+      }
+    }
+
+    // 保存原始标题
+    const pageTitle = document.getElementById('page-title');
+    if (pageTitle && !pageTitle.getAttribute('data-original')) {
+      pageTitle.setAttribute('data-original', pageTitle.textContent);
+    }
+
+    // 初始切换
+    switchView();
+
+    // 监听前进/后退
+    window.addEventListener('popstate', switchView);
+  })();
 </script>
