@@ -23,3 +23,7 @@ pnpm-debug.log*
 # jetbrains setting folder
 .idea/
 .gstack/
+
+# auto-synced news data (from AK22AK/daily-news-data)
+src/content/daily-news/*.json
+src/data/daily-news-topics.json

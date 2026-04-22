@@ -1,14 +1,17 @@
 ---
 import '../styles/global.css';
 import Header from '../components/Header.astro';
+import NewsHeader from '../components/NewsHeader.astro';
 import Footer from '../components/Footer.astro';
+import NewsFooter from '../components/NewsFooter.astro';
 
 interface Props {
   title: string;
   description?: string;
+  variant?: 'default' | 'news';
 }
 
-const { title, description = 'AK22AK 的个人主页' } = Astro.props;
+const { title, description = 'AK22AK 的个人主页', variant = 'default' } = Astro.props;
 ---
 
 <!DOCTYPE html>
@@ -21,12 +24,12 @@ const { title, description = 'AK22AK 的个人主页' } = Astro.props;
     <title>{title}</title>
   </head>
   <body>
-    <Header />
+    {variant === 'news' ? <NewsHeader /> : <Header />}
     <main class="main">
       <div class="container">
         <slot />
       </div>
     </main>
-    <Footer />
+    {variant === 'news' ? <NewsFooter /> : <Footer />}
   </body>
 </html>
