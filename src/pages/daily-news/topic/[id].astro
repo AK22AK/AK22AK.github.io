@@ -152,12 +152,18 @@ function getDisplayedItems(sourceId: string, targetCount: number = 5): DisplayRe
     fallbackItems = prevItems.slice(0, needed);
   }
 
-  const combined = [...sortedToday, ...fallbackItems];
+  // 去重：历史数据中已存在于当天的，不重复显示
+  const seenUrls = new Set(todayItems.map(i => i.url));
+  const seenTitles = new Set(todayItems.map(i => i.title));
+  const uniqueFallback = fallbackItems.filter(item =>
+    !seenUrls.has(item.url) && !seenTitles.has(item.title)
+  );
+  const combined = [...sortedToday, ...uniqueFallback];
   return {
     items: combined,
     hasMore: todayItems.length > targetCount,
     allItems: todayItems,
-    fallbackCount: fallbackItems.length,
+    fallbackCount: uniqueFallback.length,
   };
 }
 
@@ -174,8 +180,11 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
   const todayItems = currentItems.filter(i => i.source === src.id);
   let fallbackItems: typeof currentItems = [];
   if (todayItems.length < 5 && dateEntries[1]) {
+    const seenUrls = new Set(todayItems.map(i => i.url));
+    const seenTitles = new Set(todayItems.map(i => i.title));
     const prevItems = dateEntries[1].data.items
       .filter(i => i.source === src.id && i.topic === topic.id)
+      .filter(i => !seenUrls.has(i.url) && !seenTitles.has(i.title))
       .sort((a, b) => (b.pub_time || '').localeCompare(a.pub_time || ''));
     fallbackItems = prevItems.slice(0, 5 - todayItems.length);
   }
@@ -372,6 +381,19 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
 
 <script>
   (function() {
+    // 平滑滚动锚点定位
+    document.querySelectorAll('.sidebar-link[href^="#"]').forEach(link => {
+      link.addEventListener('click', (e) => {
+        const href = link.getAttribute('href');
+        if (!href || !href.startsWith('#')) return;
+        const target = document.querySelector(href);
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      });
+    });
+
     function getSourceFromUrl() {
       const url = new URL(window.location.href);
       return url.searchParams.get('source');
@@ -461,3 +483,9 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
     window.addEventListener('popstate', switchView);
   })();
 </script>
+
+<style>
+  .topic-section {
+    scroll-margin-top: 80px;
+  }
+</style>
