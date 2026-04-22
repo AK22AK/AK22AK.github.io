@@ -1,5 +1,5 @@
 #!/bin/bash
-# 从 daily-news-data 仓库同步数据到本地开发环境
+# 从 daily-news-data 仓库拉取并同步数据到本地开发环境
 # 用法:
 #   ./scripts/sync-data.sh                         # 默认从 ../daily-news-data 同步
 #   ./scripts/sync-data.sh /path/to/repo           # 指定数据仓库路径
@@ -26,6 +26,26 @@ if [ ! -d "$DATA_REPO" ]; then
     echo "❌ 数据仓库不存在: $DATA_REPO"
     echo "   请确保已 clone AK22AK/daily-news-data 到本地，或指定正确路径。"
     exit 1
+fi
+
+if [ -d "$DATA_REPO/.git" ]; then
+    echo "🔄 更新数据仓库: $DATA_REPO"
+    if [ -n "$(git -C "$DATA_REPO" status --porcelain)" ]; then
+        echo "❌ 数据仓库存在本地未提交修改，已停止同步: $DATA_REPO"
+        echo "   请先提交、暂存或清理 daily-news-data 的本地改动，再重新运行。"
+        exit 1
+    fi
+
+    CURRENT_BRANCH="$(git -C "$DATA_REPO" branch --show-current)"
+    if [ -z "$CURRENT_BRANCH" ]; then
+        echo "❌ 数据仓库当前不在分支上，已停止同步: $DATA_REPO"
+        exit 1
+    fi
+
+    git -C "$DATA_REPO" fetch origin "$CURRENT_BRANCH"
+    git -C "$DATA_REPO" pull --ff-only origin "$CURRENT_BRANCH"
+else
+    echo "⚠️ 数据目录不是 Git 仓库，仅执行本地文件同步: $DATA_REPO"
 fi
 
 # 确保目录存在
