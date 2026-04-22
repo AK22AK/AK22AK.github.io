@@ -194,7 +194,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
         </div>
         <h3 class="sidebar-title" id="sidebar-title">📖 来源导航</h3>
         <nav class="sidebar-nav" id="sidebar-nav">
-          <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`} class="sidebar-link" id="nav-overview">
+          <a href="#top10" class="sidebar-link" id="nav-overview">
             <span class="sidebar-icon">📊</span>
             <span class="sidebar-name">概览</span>
           </a>
@@ -202,7 +202,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
             const count = sourceGroups.get(src.id)?.length || 0;
             return (
               <a
-                href={`/daily-news/topic/${topic.id}/?source=${src.id}&date=${currentDate}`}
+                href={`#src-${src.id}`}
                 class="sidebar-link nav-source"
                 data-source={src.id}
               >
