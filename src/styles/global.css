@@ -621,8 +621,14 @@ p {
 }
 
 .item-source {
-  color: #999;
-  font-size: 0.8rem;
+  display: inline-block;
+  color: #888;
+  font-size: 0.7rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  background: #f3f4f6;
+  padding: 0.05rem 0.35rem;
+  border-radius: 4px;
 }
 
 .topic-empty {
