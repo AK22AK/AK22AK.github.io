@@ -122,7 +122,7 @@ const sortedSources = [...orderedSources].sort((a, b) => {
           <span class={`topic-tag ${topic.type}`}>{topic.type === 'longterm' ? '长期板块' : '短期板块'}</span>
           {!topic.active && <span class="topic-tag archived">已归档</span>}
         </div>
-        <p style="color: #555;">{topic.description}</p>
+
         {topic.type === 'shortterm' && (
           <p style="color: #888; font-size: 0.85rem; margin-top: 0.5rem;">
             时间范围：{topic.startDate} ~ {topic.endDate}

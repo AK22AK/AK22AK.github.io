@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import Calendar from '../../components/Calendar.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -71,6 +72,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
             <span class="sidebar-name">全部归档</span>
           </a>
         </div>
+        <Calendar dates={availableDates} currentDate={currentDate} />
       </div>
     </aside>
 
@@ -83,16 +85,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
           <h1>每日早报 {currentDate.replace(/-/g, '.')}</h1>
         </div>
         <span class="date-weekday">{currentWeekday}</span>
-        <p class="date-desc">
-          今日精选 {currentItems.length} 条资讯，为你摘选 {activeTopics.map(t => t.name).join('、')} 动态。
-        </p>
-        <div class="date-list">
-          {availableDates.map(date => (
-            <a href={`/daily-news/?date=${date}`} class={`date-pill ${date === currentDate ? 'active' : ''}`}>
-              {date.slice(5)}
-            </a>
-          ))}
-        </div>
+
       </header>
 
       <!-- 板块内容：只展示 top10 -->
