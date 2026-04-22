@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Calendar from '../../../components/Calendar.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -28,6 +29,7 @@ dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
 
 const url = new URL(Astro.request.url);
 const selectedDate = url.searchParams.get('date');
+const selectedSource = url.searchParams.get('source');
 const availableDates = dateEntries.map(e => e.data.date);
 const currentDate = selectedDate && availableDates.includes(selectedDate)
   ? selectedDate
@@ -160,32 +162,54 @@ function getDisplayedItems(sourceId: string, targetCount: number = 5): DisplayRe
     fallbackCount: fallbackItems.length,
   };
 }
+
+// 来源详情模式
+const sourceDetail = selectedSource ? sortedSources.find(s => s.id === selectedSource) : null;
+const detailItems = sourceDetail ? currentItems.filter(i => i.source === sourceDetail.id) : [];
+const detailFallback: typeof currentItems = [];
+if (sourceDetail && detailItems.length < 5 && dateEntries[1]) {
+  const prevItems = dateEntries[1].data.items
+    .filter(i => i.source === sourceDetail.id && i.topic === topic.id)
+    .sort((a, b) => (b.pub_time || '').localeCompare(a.pub_time || ''));
+  detailFallback.push(...prevItems.slice(0, 5 - detailItems.length));
+}
 ---
 
 <BaseLayout title={`${topic.name} - 新闻详情 - AK22AK`} description={`AK22AK 关注的 ${topic.name} 资讯详情`} variant="news">
   <div class="daily-news-layout">
-    <!-- 左侧来源导航 -->
+    <!-- 左侧导航 -->
     <aside class="sidebar">
       <div class="sidebar-inner">
         <div style="margin-bottom: 1rem;">
-          <a href="/daily-news/" style="color: #888; font-size: 0.85rem;">← 返回首页</a>
+          {sourceDetail ? (
+            <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`} style="color: #888; font-size: 0.85rem;">← 返回 {topic.name} 概览</a>
+          ) : (
+            <a href="/daily-news/" style="color: #888; font-size: 0.85rem;">← 返回新闻首页</a>
+          )}
         </div>
-        <h3 class="sidebar-title">📖 来源导航</h3>
+        <h3 class="sidebar-title">📖 {sourceDetail ? sourceDetail.name : '来源导航'}</h3>
         <nav class="sidebar-nav">
-          <a href="#top10" class="sidebar-link">
-            <span class="sidebar-icon">🔥</span>
-            <span class="sidebar-name">热门 TOP10</span>
-          </a>
+          {!sourceDetail && (
+            <a href="#top10" class="sidebar-link">
+              <span class="sidebar-icon">🔥</span>
+              <span class="sidebar-name">热门 TOP10</span>
+            </a>
+          )}
           {sortedSources.map(src => {
+            const isActive = sourceDetail?.id === src.id;
             const count = sourceGroups.get(src.id)?.length || 0;
             return (
-              <a href={`#src-${src.id}`} class="sidebar-link">
+              <a
+                href={`/daily-news/topic/${topic.id}/?source=${src.id}&date=${currentDate}`}
+                class={`sidebar-link ${isActive ? 'active' : ''}`}
+              >
                 <span class="sidebar-name">{src.name}</span>
-                {count > 0 && <span class="sidebar-count">{count}</span>}
+                {!sourceDetail && count > 0 && <span class="sidebar-count">{count}</span>}
               </a>
             );
           })}
         </nav>
+        <Calendar dates={availableDates} currentDate={currentDate} baseUrl={`/daily-news/topic/${topic.id}/`} />
       </div>
     </aside>
 
@@ -195,7 +219,7 @@ function getDisplayedItems(sourceId: string, targetCount: number = 5): DisplayRe
       <div class="date-list" style="margin-bottom: 1.5rem; justify-content: flex-start;">
         {availableDates.map(date => (
           <a
-            href={`/daily-news/topic/${topic.id}/?date=${date}`}
+            href={`/daily-news/topic/${topic.id}/?date=${date}${sourceDetail ? `&source=${sourceDetail.id}` : ''}`}
             class={`date-pill ${date === currentDate ? 'active' : ''}`}
           >
             {date}
@@ -205,134 +229,135 @@ function getDisplayedItems(sourceId: string, targetCount: number = 5): DisplayRe
 
       <!-- 板块信息卡 -->
       <div class="topic-hero">
-        <h1>{topic.name}</h1>
+        <h1>
+          {sourceDetail ? `${sourceDetail.name} — ${topic.name}` : topic.name}
+        </h1>
         <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap;">
           <span class={`topic-tag ${topic.type}`}>{topic.type === 'longterm' ? '长期板块' : '短期板块'}</span>
           {!topic.active && <span class="topic-tag archived">已归档</span>}
+          {sourceDetail && detailFallback.length > 0 && (
+            <span style="font-size: 0.75rem; color: #888;">含 {detailFallback.length} 条昨日补充</span>
+          )}
         </div>
 
-        {topic.type === 'shortterm' && (
+        {topic.type === 'shortterm' && !sourceDetail && (
           <p style="color: #888; font-size: 0.85rem; margin-top: 0.5rem;">
             时间范围：{topic.startDate} ~ {topic.endDate}
           </p>
         )}
       </div>
 
-      <!-- TOP10 -->
-      <section id="top10" class="topic-section">
-        <div class="topic-section-header">
-          <h2>🔥 热门 TOP10</h2>
-        </div>
-        {top10.length > 0 ? (
-          <div class="topic-list">
-            {top10.map((item, idx) => (
-              <article class="topic-item">
-                <span class="item-rank">{idx + 1}</span>
-                <div class="item-body">
-                  <h3 class="item-title">
-                    <a href={item.url} target="_blank">{item.title}</a>
-                    <span class="item-source">{item.source}</span>
-                  </h3>
-                  <p class="item-summary">{item.summary}</p>
-                </div>
-              </article>
-            ))}
+      {sourceDetail ? (
+        <!-- 来源详情模式：展示该来源全部列表 -->
+        <section class="topic-section">
+          <div class="topic-section-header">
+            <h2>
+              {currentDate.replace(/-/g, '.')} 全部资讯
+              <span style="font-size: 0.8rem; color: #888; font-weight: 400; margin-left: 0.5rem;">
+                共 {detailItems.length + detailFallback.length} 条
+              </span>
+            </h2>
           </div>
-        ) : (
-          <div class="topic-empty">暂无热门资讯</div>
-        )}
-      </section>
-
-      <!-- 分来源展示 -->
-      {sortedSources.map(src => {
-        const { items, hasMore, allItems, fallbackCount } = getDisplayedItems(src.id, 5);
-        const todayCount = allItems.length;
-        return (
-          <section id={`src-${src.id}`} class="topic-section">
-            <div class="topic-section-header">
-              <h2>
-                {src.name}
-                {fallbackCount > 0 && (
-                  <span style="font-size: 0.75rem; color: #888; font-weight: 400; margin-left: 0.5rem;">
-                    含 {fallbackCount} 条昨日补充
-                  </span>
-                )}
-              </h2>
-              <a href={src.url} target="_blank" class="source-home-link">
-                访问官网 ↗
-              </a>
+          {detailItems.length > 0 || detailFallback.length > 0 ? (
+            <div class="topic-list">
+              {[...detailItems, ...detailFallback].map((item, idx) => (
+                <article class="topic-item">
+                  <div class="item-body" style="margin-left: 0;">
+                    <h3 class="item-title">
+                      <a href={item.url} target="_blank">{item.title}</a>
+                      {idx >= detailItems.length && (
+                        <span class="item-source" style="background: #fef3c7; color: #92400e;">昨日</span>
+                      )}
+                    </h3>
+                    <p class="item-summary">{item.summary}</p>
+                  </div>
+                </article>
+              ))}
             </div>
-            {items.length > 0 ? (
-              <>
-                <div class="topic-list">
-                  {items.map(item => (
-                    <article class="topic-item">
-                      <div class="item-body" style="margin-left: 0;">
-                        <h3 class="item-title">
-                          <a href={item.url} target="_blank">{item.title}</a>
-                        </h3>
-                        <p class="item-summary">{item.summary}</p>
-                      </div>
-                    </article>
-                  ))}
-                </div>
-                {hasMore && (
-                  <details class="source-more">
-                    <summary>查看全部 {todayCount} 条今日资讯 →</summary>
-                    <div class="topic-list" style="margin-top: 0.5rem;">
-                      {allItems.slice(5).map(item => (
-                        <article class="topic-item">
-                          <div class="item-body" style="margin-left: 0;">
-                            <h3 class="item-title">
-                              <a href={item.url} target="_blank">{item.title}</a>
-                            </h3>
-                            <p class="item-summary">{item.summary}</p>
-                          </div>
-                        </article>
-                      ))}
+          ) : (
+            <div class="topic-empty">当日暂无 {sourceDetail.name} 资讯</div>
+          )}
+          <div style="margin-top: 1.5rem; text-align: center;">
+            <a href={sourceDetail.url} target="_blank" class="btn" style="background: #fff; color: #2563eb; border: 1px solid #2563eb;">
+              访问 {sourceDetail.name} 官网 ↗
+            </a>
+          </div>
+        </section>
+      ) : (
+        <>
+          <!-- TOP10 -->
+          <section id="top10" class="topic-section">
+            <div class="topic-section-header">
+              <h2>🔥 热门 TOP10</h2>
+            </div>
+            {top10.length > 0 ? (
+              <div class="topic-list">
+                {top10.map((item, idx) => (
+                  <article class="topic-item">
+                    <span class="item-rank">{idx + 1}</span>
+                    <div class="item-body">
+                      <h3 class="item-title">
+                        <a href={item.url} target="_blank">{item.title}</a>
+                        <span class="item-source">{item.source}</span>
+                      </h3>
+                      <p class="item-summary">{item.summary}</p>
                     </div>
-                  </details>
-                )}
-              </>
+                  </article>
+                ))}
+              </div>
             ) : (
-              <div class="topic-empty">当日暂无 {src.name} 资讯</div>
+              <div class="topic-empty">暂无热门资讯</div>
             )}
           </section>
-        );
-      })}
+
+          <!-- 分来源展示 -->
+          {sortedSources.map(src => {
+            const { items, hasMore, allItems, fallbackCount } = getDisplayedItems(src.id, 5);
+            const todayCount = allItems.length;
+            return (
+              <section id={`src-${src.id}`} class="topic-section">
+                <div class="topic-section-header">
+                  <h2>
+                    {src.name}
+                    {fallbackCount > 0 && (
+                      <span style="font-size: 0.75rem; color: #888; font-weight: 400; margin-left: 0.5rem;">
+                        含 {fallbackCount} 条昨日补充
+                      </span>
+                    )}
+                  </h2>
+                  <a href={`/daily-news/topic/${topic.id}/?source=${src.id}&date=${currentDate}`} class="source-home-link">
+                    查看全部 {todayCount} 条 →
+                  </a>
+                </div>
+                {items.length > 0 ? (
+                  <div class="topic-list">
+                    {items.map(item => (
+                      <article class="topic-item">
+                        <div class="item-body" style="margin-left: 0;">
+                          <h3 class="item-title">
+                            <a href={item.url} target="_blank">{item.title}</a>
+                          </h3>
+                          <p class="item-summary">{item.summary}</p>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                ) : (
+                  <div class="topic-empty">当日暂无 {src.name} 资讯</div>
+                )}
+                <div style="margin-top: 0.75rem; text-align: right;">
+                  <a href={src.url} target="_blank" style="color: #888; font-size: 0.85rem;">
+                    访问 {src.name} 官网 ↗
+                  </a>
+                </div>
+              </section>
+            );
+          })}
+        </>
+      )}
     </main>
   </div>
 </BaseLayout>
-
-<style>
-  .source-more {
-    margin-top: 0.75rem;
-  }
-  .source-more summary {
-    cursor: pointer;
-    color: #2563eb;
-    font-size: 0.9rem;
-    font-weight: 500;
-    list-style: none;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-  }
-  .source-more summary::-webkit-details-marker {
-    display: none;
-  }
-  .source-more summary::before {
-    content: '▼';
-    font-size: 0.7rem;
-    transition: transform 0.2s;
-  }
-  .source-more[open] summary::before {
-    transform: rotate(180deg);
-  }
-  .source-more[open] summary {
-    color: #555;
-  }
-</style>
 
 <script>
   document.querySelectorAll('.sidebar-link[href^="#"]').forEach(link => {

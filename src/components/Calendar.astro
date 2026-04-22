@@ -2,12 +2,13 @@
 interface Props {
   dates: string[];  // ['2026-04-20', '2026-04-19', ...]
   currentDate?: string;
+  baseUrl?: string;
 }
 
-const { dates, currentDate } = Astro.props;
+const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
 ---
 
-<div class="calendar" data-dates={JSON.stringify(dates)} data-current={currentDate || ''}>
+<div class="calendar" data-dates={JSON.stringify(dates)} data-current={currentDate || ''} data-base={baseUrl}>
   <div class="calendar-header">
     <button class="cal-btn cal-prev" type="button" aria-label="上月">‹</button>
     <span class="cal-month"></span>
@@ -140,7 +141,9 @@ const { dates, currentDate } = Astro.props;
 
         if (hasData) {
           el.classList.add('has-data');
-          (el as HTMLAnchorElement).href = `/daily-news/?date=${dateStr}`;
+          const base = calendar.getAttribute('data-base') || '/daily-news/';
+          const sep = base.includes('?') ? '&' : '?';
+          (el as HTMLAnchorElement).href = `${base}${sep}date=${dateStr}`;
         }
         if (isActive) el.classList.add('active');
         if (isToday && !isActive) el.classList.add('today');
