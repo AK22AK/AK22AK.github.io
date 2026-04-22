@@ -72,6 +72,94 @@ const freqOrder = { high: 0, medium: 1, low: 2 };
 const sortedSources = [...orderedSources].sort((a, b) => {
   return (freqOrder as any)[a.frequency] - (freqOrder as any)[b.frequency];
 });
+
+// ===== 权重排序系统 =====
+const BRAND_KEYWORDS = [
+  '苹果', 'iPhone', 'iPad', 'Mac', '小米', '华为', '三星', 'OPPO', 'vivo',
+  '谷歌', 'Pixel', '特斯拉', '比亚迪', 'OpenAI', 'ChatGPT', 'Claude',
+  '英伟达', 'NVIDIA', 'AMD', '英特尔', '微软', 'Meta', 'Steam',
+  '腾讯', '阿里', '字节', '百度', '网易', 'B站', '哔哩哔哩',
+  '微信', '抖音', '淘宝', '京东', '拼多多',
+  '马云', '马化腾', '雷军', '马斯克',
+  '宁德时代', '大疆',
+];
+
+function hasBrandKeyword(title: string): boolean {
+  return BRAND_KEYWORDS.some(kw => title.includes(kw));
+}
+
+function hasNumber(title: string): boolean {
+  return /\d/.test(title);
+}
+
+function isMorningPost(title: string): boolean {
+  const t = title.toLowerCase();
+  const keywords = ['早报', '派早报', 'morning', '晨读', '今日早报'];
+  return keywords.some(kw => t.includes(kw));
+}
+
+function hoursAgo(pubTime: string | undefined): number {
+  if (!pubTime) return 48;
+  const pub = new Date(pubTime);
+  const now = new Date();
+  return Math.max(0, (now.getTime() - pub.getTime()) / (1000 * 60 * 60));
+}
+
+function calcWeight(item: typeof currentItems[0]): number {
+  const title = item.title;
+  let weight = 0;
+  if (isMorningPost(title)) weight += 1000;
+  if (hasBrandKeyword(title)) weight += 10;
+  if (hasNumber(title)) weight += 5;
+  const h = hoursAgo(item.pub_time);
+  weight += (1 / (h + 1)) * 50;
+  return weight;
+}
+
+function getTopItems(items: typeof currentItems, count: number = 5) {
+  return [...items].sort((a, b) => calcWeight(b) - calcWeight(a)).slice(0, count);
+}
+
+// 获取展示用 items：当天权重排序 + 前一天补充
+type DisplayResult = {
+  items: typeof currentItems;
+  hasMore: boolean;
+  allItems: typeof currentItems;
+  fallbackCount: number;
+};
+
+function getDisplayedItems(sourceId: string, targetCount: number = 5): DisplayResult {
+  const todayItems = currentItems.filter(i => i.source === sourceId);
+  const sortedToday = getTopItems(todayItems, targetCount);
+
+  if (sortedToday.length >= targetCount) {
+    return {
+      items: sortedToday,
+      hasMore: todayItems.length > targetCount,
+      allItems: todayItems,
+      fallbackCount: 0,
+    };
+  }
+
+  // 从前一天补充
+  const prevEntry = dateEntries[1];
+  let fallbackItems: typeof currentItems = [];
+  if (prevEntry) {
+    const prevItems = prevEntry.data.items
+      .filter(i => i.source === sourceId && i.topic === topic.id)
+      .sort((a, b) => (b.pub_time || '').localeCompare(a.pub_time || ''));
+    const needed = targetCount - sortedToday.length;
+    fallbackItems = prevItems.slice(0, needed);
+  }
+
+  const combined = [...sortedToday, ...fallbackItems];
+  return {
+    items: combined,
+    hasMore: todayItems.length > targetCount,
+    allItems: todayItems,
+    fallbackCount: fallbackItems.length,
+  };
+}
 ---
 
 <BaseLayout title={`${topic.name} - 新闻详情 - AK22AK`} description={`AK22AK 关注的 ${topic.name} 资讯详情`} variant="news">
@@ -157,29 +245,55 @@ const sortedSources = [...orderedSources].sort((a, b) => {
 
       <!-- 分来源展示 -->
       {sortedSources.map(src => {
-        const items = sourceGroups.get(src.id) || [];
-        const displayItems = items;
+        const { items, hasMore, allItems, fallbackCount } = getDisplayedItems(src.id, 5);
+        const todayCount = allItems.length;
         return (
           <section id={`src-${src.id}`} class="topic-section">
             <div class="topic-section-header">
-              <h2>{src.name}</h2>
+              <h2>
+                {src.name}
+                {fallbackCount > 0 && (
+                  <span style="font-size: 0.75rem; color: #888; font-weight: 400; margin-left: 0.5rem;">
+                    含 {fallbackCount} 条昨日补充
+                  </span>
+                )}
+              </h2>
               <a href={src.url} target="_blank" class="source-home-link">
                 访问官网 ↗
               </a>
             </div>
-            {displayItems.length > 0 ? (
-              <div class="topic-list">
-                {displayItems.map(item => (
-                  <article class="topic-item">
-                    <div class="item-body" style="margin-left: 0;">
-                      <h3 class="item-title">
-                        <a href={item.url} target="_blank">{item.title}</a>
-                      </h3>
-                      <p class="item-summary">{item.summary}</p>
+            {items.length > 0 ? (
+              <>
+                <div class="topic-list">
+                  {items.map(item => (
+                    <article class="topic-item">
+                      <div class="item-body" style="margin-left: 0;">
+                        <h3 class="item-title">
+                          <a href={item.url} target="_blank">{item.title}</a>
+                        </h3>
+                        <p class="item-summary">{item.summary}</p>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+                {hasMore && (
+                  <details class="source-more">
+                    <summary>查看全部 {todayCount} 条今日资讯 →</summary>
+                    <div class="topic-list" style="margin-top: 0.5rem;">
+                      {allItems.slice(5).map(item => (
+                        <article class="topic-item">
+                          <div class="item-body" style="margin-left: 0;">
+                            <h3 class="item-title">
+                              <a href={item.url} target="_blank">{item.title}</a>
+                            </h3>
+                            <p class="item-summary">{item.summary}</p>
+                          </div>
+                        </article>
+                      ))}
                     </div>
-                  </article>
-                ))}
-              </div>
+                  </details>
+                )}
+              </>
             ) : (
               <div class="topic-empty">当日暂无 {src.name} 资讯</div>
             )}
@@ -189,6 +303,36 @@ const sortedSources = [...orderedSources].sort((a, b) => {
     </main>
   </div>
 </BaseLayout>
+
+<style>
+  .source-more {
+    margin-top: 0.75rem;
+  }
+  .source-more summary {
+    cursor: pointer;
+    color: #2563eb;
+    font-size: 0.9rem;
+    font-weight: 500;
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+  .source-more summary::-webkit-details-marker {
+    display: none;
+  }
+  .source-more summary::before {
+    content: '▼';
+    font-size: 0.7rem;
+    transition: transform 0.2s;
+  }
+  .source-more[open] summary::before {
+    transform: rotate(180deg);
+  }
+  .source-more[open] summary {
+    color: #555;
+  }
+</style>
 
 <script>
   document.querySelectorAll('.sidebar-link[href^="#"]').forEach(link => {

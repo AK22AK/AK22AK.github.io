@@ -36,19 +36,61 @@ function getTopicIcon(id: string) {
   return map[id] || '📰';
 }
 
-// top10 规则：当天该板块 items 按原序取前10（RSS 抓取时已按时间倒序）
+// ===== 权重排序系统 =====
+const BRAND_KEYWORDS = [
+  '苹果', 'iPhone', 'iPad', 'Mac', '小米', '华为', '三星', 'OPPO', 'vivo',
+  '谷歌', 'Pixel', '特斯拉', '比亚迪', 'OpenAI', 'ChatGPT', 'Claude',
+  '英伟达', 'NVIDIA', 'AMD', '英特尔', '微软', 'Meta', 'Steam',
+  '腾讯', '阿里', '字节', '百度', '网易', 'B站', '哔哩哔哩',
+  '微信', '抖音', '淘宝', '京东', '拼多多',
+  '马云', '马化腾', '雷军', '马斯克',
+  '宁德时代', '大疆',
+];
+
+function hasBrandKeyword(title: string): boolean {
+  return BRAND_KEYWORDS.some(kw => title.includes(kw));
+}
+
+function hasNumber(title: string): boolean {
+  return /\d/.test(title);
+}
+
+function isMorningPost(title: string): boolean {
+  const t = title.toLowerCase();
+  const keywords = ['早报', '派早报', 'morning', '晨读', '今日早报'];
+  return keywords.some(kw => t.includes(kw));
+}
+
+function hoursAgo(pubTime: string | undefined): number {
+  if (!pubTime) return 48;
+  const pub = new Date(pubTime);
+  const now = new Date();
+  return Math.max(0, (now.getTime() - pub.getTime()) / (1000 * 60 * 60));
+}
+
+function calcWeight(item: typeof currentItems[0]): number {
+  const title = item.title;
+  let weight = 0;
+  if (isMorningPost(title)) weight += 1000;
+  if (hasBrandKeyword(title)) weight += 10;
+  if (hasNumber(title)) weight += 5;
+  const h = hoursAgo(item.pub_time);
+  weight += (1 / (h + 1)) * 50;
+  return weight;
+}
+
+// top10 规则：权重排序 + 去重后取前10
 function getTop10(items: typeof currentItems, topicId: string) {
   const topicItems = items.filter(i => i.topic === topicId);
   const seen = new Set();
-  const result = [];
+  const deduped = [];
   for (const item of topicItems) {
     if (!seen.has(item.title)) {
       seen.add(item.title);
-      result.push(item);
+      deduped.push(item);
     }
-    if (result.length >= 10) break;
   }
-  return result;
+  return deduped.sort((a, b) => calcWeight(b) - calcWeight(a)).slice(0, 10);
 }
 ---
 
