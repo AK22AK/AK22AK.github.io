@@ -6,8 +6,10 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "predev": "bash scripts/sync-data.sh ../daily-news-data 2>/dev/null || true",
+    "sync:data": "bash scripts/sync-data.sh ../daily-news-data --optional",
+    "predev": "npm run sync:data --silent",
     "dev": "astro dev",
+    "prebuild": "npm run sync:data --silent",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro"

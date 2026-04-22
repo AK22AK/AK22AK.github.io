@@ -24,6 +24,7 @@ const dailyNews = defineCollection({
         url: z.string().url(),
         source: z.string(),
         topic: z.string(),
+        pub_time: z.string().optional(),
       })
     ),
   }),

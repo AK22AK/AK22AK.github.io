@@ -1,16 +1,28 @@
 #!/bin/bash
 # 从 daily-news-data 仓库同步数据到本地开发环境
 # 用法:
-#   ./scripts/sync-data.sh                    # 默认从 ../daily-news-data 同步
-#   ./scripts/sync-data.sh /path/to/repo      # 指定数据仓库路径
+#   ./scripts/sync-data.sh                         # 默认从 ../daily-news-data 同步
+#   ./scripts/sync-data.sh /path/to/repo           # 指定数据仓库路径
+#   ./scripts/sync-data.sh /path/to/repo --optional # 数据仓库不存在时跳过
 
 set -e
 
 DATA_REPO="${1:-../daily-news-data}"
+OPTIONAL=false
+if [ "$1" = "--optional" ]; then
+    DATA_REPO="../daily-news-data"
+    OPTIONAL=true
+elif [ "$2" = "--optional" ]; then
+    OPTIONAL=true
+fi
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
 if [ ! -d "$DATA_REPO" ]; then
+    if [ "$OPTIONAL" = true ]; then
+        echo "⚠️ 数据仓库不存在，跳过同步: $DATA_REPO"
+        exit 0
+    fi
     echo "❌ 数据仓库不存在: $DATA_REPO"
     echo "   请确保已 clone AK22AK/daily-news-data 到本地，或指定正确路径。"
     exit 1

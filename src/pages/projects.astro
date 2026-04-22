@@ -16,19 +16,19 @@ const projects = Array.isArray(repos)
 <BaseLayout title="开发项目 - AK22AK" description="AK22AK 的 GitHub 开源项目">
   <h1>💻 开发项目</h1>
   <p style="color: #666; margin-bottom: 1.5rem;">
-    以下项目自动从我的 <a href="https://github.com/AK22AK" target="_blank">GitHub</a> 获取，新增项目会自动同步。
+    以下项目自动从我的 <a href="https://github.com/AK22AK" target="_blank" rel="noopener noreferrer">GitHub</a> 获取，新增项目会自动同步。
   </p>
 
   {projects.length === 0 ? (
     <div class="card">
-      <p>暂时没有公开项目，或者 API 请求受限。你可以直接访问我的 <a href="https://github.com/AK22AK" target="_blank">GitHub 主页</a> 查看。</p>
+      <p>暂时没有公开项目，或者 API 请求受限。你可以直接访问我的 <a href="https://github.com/AK22AK" target="_blank" rel="noopener noreferrer">GitHub 主页</a> 查看。</p>
     </div>
   ) : (
     <div class="project-grid">
       {projects.map((repo: any) => (
         <div class="card project-card">
           <h3>
-            <a href={repo.html_url} target="_blank">{repo.name}</a>
+            <a href={repo.html_url} target="_blank" rel="noopener noreferrer">{repo.name}</a>
           </h3>
           <p style="color: #555; font-size: 0.95rem;">
             {repo.description || '暂无描述'}

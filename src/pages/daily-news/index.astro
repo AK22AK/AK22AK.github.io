@@ -63,7 +63,9 @@ function isMorningPost(title: string): boolean {
 
 function hoursAgo(pubTime: string | undefined): number {
   if (!pubTime) return 48;
-  const pub = new Date(pubTime);
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(pubTime);
+  const pub = new Date(hasTimezone ? pubTime : `${pubTime}Z`);
+  if (Number.isNaN(pub.getTime())) return 48;
   const now = new Date();
   return Math.max(0, (now.getTime() - pub.getTime()) / (1000 * 60 * 60));
 }
@@ -151,7 +153,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
                     <span class="item-rank">{idx + 1}</span>
                     <div class="item-body">
                       <h3 class="item-title">
-                        <a href={item.url} target="_blank">{item.title}</a>
+                        <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
                         <span class="item-source">{item.source}</span>
                       </h3>
                       <p class="item-summary">{item.summary}</p>
@@ -184,11 +186,13 @@ function getTop10(items: typeof currentItems, topicId: string) {
 </BaseLayout>
 
 <script>
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
   document.querySelectorAll('.sidebar-link[href^="#"]').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const target = document.querySelector(link.getAttribute('href')!);
-      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (target) target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
     });
   });
 

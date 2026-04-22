@@ -101,9 +101,18 @@ function isMorningPost(title: string): boolean {
 
 function hoursAgo(pubTime: string | undefined): number {
   if (!pubTime) return 48;
-  const pub = new Date(pubTime);
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(pubTime);
+  const pub = new Date(hasTimezone ? pubTime : `${pubTime}Z`);
+  if (Number.isNaN(pub.getTime())) return 48;
   const now = new Date();
   return Math.max(0, (now.getTime() - pub.getTime()) / (1000 * 60 * 60));
+}
+
+function pubTimeValue(pubTime: string | undefined): number {
+  if (!pubTime) return 0;
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(pubTime);
+  const pub = new Date(hasTimezone ? pubTime : `${pubTime}Z`);
+  return Number.isNaN(pub.getTime()) ? 0 : pub.getTime();
 }
 
 function calcWeight(item: typeof currentItems[0]): number {
@@ -147,7 +156,7 @@ function getDisplayedItems(sourceId: string, targetCount: number = 5): DisplayRe
   if (prevEntry) {
     const prevItems = prevEntry.data.items
       .filter(i => i.source === sourceId && i.topic === topic.id)
-      .sort((a, b) => (b.pub_time || '').localeCompare(a.pub_time || ''));
+      .sort((a, b) => pubTimeValue(b.pub_time) - pubTimeValue(a.pub_time));
     const needed = targetCount - sortedToday.length;
     fallbackItems = prevItems.slice(0, needed);
   }
@@ -185,7 +194,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
     const prevItems = dateEntries[1].data.items
       .filter(i => i.source === src.id && i.topic === topic.id)
       .filter(i => !seenUrls.has(i.url) && !seenTitles.has(i.title))
-      .sort((a, b) => (b.pub_time || '').localeCompare(a.pub_time || ''));
+      .sort((a, b) => pubTimeValue(b.pub_time) - pubTimeValue(a.pub_time));
     fallbackItems = prevItems.slice(0, 5 - todayItems.length);
   }
   return { id: src.id, name: src.name, url: src.url, todayItems, fallbackItems };
@@ -269,7 +278,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
                   <span class="item-rank">{idx + 1}</span>
                   <div class="item-body">
                     <h3 class="item-title">
-                      <a href={item.url} target="_blank">{item.title}</a>
+                      <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
                       <span class="item-source">{item.source}</span>
                     </h3>
                     <p class="item-summary">{item.summary}</p>
@@ -307,7 +316,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
                     <article class="topic-item">
                       <div class="item-body" style="margin-left: 0;">
                         <h3 class="item-title">
-                          <a href={item.url} target="_blank">{item.title}</a>
+                          <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
                         </h3>
                         <p class="item-summary">{item.summary}</p>
                       </div>
@@ -318,7 +327,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
                 <div class="topic-empty">当日暂无 {src.name} 资讯</div>
               )}
               <div style="margin-top: 0.75rem; text-align: right;">
-                <a href={src.url} target="_blank" style="color: #888; font-size: 0.85rem;">
+                <a href={src.url} target="_blank" rel="noopener noreferrer" style="color: #888; font-size: 0.85rem;">
                   访问 {src.name} 官网 ↗
                 </a>
               </div>
@@ -353,7 +362,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
                     <article class="topic-item">
                       <div class="item-body" style="margin-left: 0;">
                         <h3 class="item-title">
-                          <a href={item.url} target="_blank">{item.title}</a>
+                          <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
                           {idx >= src.todayItems.length && (
                             <span class="item-source" style="background: #fef3c7; color: #92400e;">昨日</span>
                           )}
@@ -367,7 +376,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
                 <div class="topic-empty">当日暂无 {src.name} 资讯</div>
               )}
               <div style="margin-top: 1.5rem; text-align: center;">
-                <a href={src.url} target="_blank" class="btn" style="background: #fff; color: #2563eb; border: 1px solid #2563eb;">
+                <a href={src.url} target="_blank" rel="noopener noreferrer" class="btn" style="background: #fff; color: #2563eb; border: 1px solid #2563eb;">
                   访问 {src.name} 官网 ↗
                 </a>
               </div>
@@ -382,6 +391,8 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
 <script>
   (function() {
     // 平滑滚动锚点定位
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
     document.querySelectorAll('.sidebar-link[href^="#"]').forEach(link => {
       link.addEventListener('click', (e) => {
         const href = link.getAttribute('href');
@@ -389,7 +400,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
         const target = document.querySelector(href);
         if (target) {
           e.preventDefault();
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
         }
       });
     });
