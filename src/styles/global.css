@@ -549,6 +549,34 @@ p {
   letter-spacing: 0.05em;
 }
 
+.topic-daily-brief {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 4px solid #2563eb;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  padding: 1rem 1.125rem;
+}
+
+.topic-daily-brief p {
+  margin: 0;
+  color: #1f2937;
+  font-size: 0.95rem;
+  line-height: 1.65;
+}
+
+.topic-daily-brief ul {
+  margin: 0.75rem 0 0;
+  padding-left: 1.2rem;
+  color: #4b5563;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.topic-daily-brief li + li {
+  margin-top: 0.25rem;
+}
+
 .item-rank {
   display: flex;
   align-items: center;

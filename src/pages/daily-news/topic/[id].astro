@@ -35,6 +35,7 @@ const currentDate = selectedDate && availableDates.includes(selectedDate)
   : (availableDates[0] || '');
 const currentEntry = dateEntries.find(e => e.data.date === currentDate);
 const currentItems = currentEntry?.data.items.filter(i => i.topic === topic.id) || [];
+const currentTopicSummary = currentEntry?.data.topic_summaries?.find(s => s.topic === topic.id);
 
 // 跨日期取该板块所有新闻（用于 top10）
 const allTopicItems: Array<{item: typeof currentItems[0]; date: string}> = [];
@@ -124,6 +125,10 @@ function calcWeight(item: typeof currentItems[0]): number {
   const h = hoursAgo(item.pub_time);
   weight += (1 / (h + 1)) * 50;
   return weight;
+}
+
+function getItemSummary(item: typeof currentItems[0]): string {
+  return item.ai_summary || item.summary;
 }
 
 function getTopItems(items: typeof currentItems, count: number = 5) {
@@ -264,6 +269,22 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
         )}
       </div>
 
+      {currentTopicSummary && (
+        <section class="topic-section">
+          <div class="topic-section-header">
+            <h2>今日看点</h2>
+          </div>
+          <div class="topic-daily-brief">
+            <p>{currentTopicSummary.summary}</p>
+            {currentTopicSummary.highlights.length > 0 && (
+              <ul>
+                {currentTopicSummary.highlights.map(highlight => <li>{highlight}</li>)}
+              </ul>
+            )}
+          </div>
+        </section>
+      )}
+
       <!-- ===== 概览视图 ===== -->
       <div id="overview-view">
         <!-- TOP10 -->
@@ -281,7 +302,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
                       <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
                       <span class="item-source">{item.source}</span>
                     </h3>
-                    <p class="item-summary">{item.summary}</p>
+                    <p class="item-summary">{getItemSummary(item)}</p>
                   </div>
                 </article>
               ))}
@@ -318,7 +339,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
                         <h3 class="item-title">
                           <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
                         </h3>
-                        <p class="item-summary">{item.summary}</p>
+                        <p class="item-summary">{getItemSummary(item)}</p>
                       </div>
                     </article>
                   ))}
@@ -367,7 +388,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
                             <span class="item-source" style="background: #fef3c7; color: #92400e;">昨日</span>
                           )}
                         </h3>
-                        <p class="item-summary">{item.summary}</p>
+                        <p class="item-summary">{getItemSummary(item)}</p>
                       </div>
                     </article>
                   ))}

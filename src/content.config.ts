@@ -17,10 +17,18 @@ const dailyNews = defineCollection({
   schema: z.object({
     date: z.string(),
     update_time: z.string().optional(),
+    topic_summaries: z.array(
+      z.object({
+        topic: z.string(),
+        summary: z.string(),
+        highlights: z.array(z.string()),
+      })
+    ).optional(),
     items: z.array(
       z.object({
         title: z.string(),
         summary: z.string(),
+        ai_summary: z.string().optional(),
         url: z.string().url(),
         source: z.string(),
         topic: z.string(),

@@ -24,6 +24,7 @@ const currentDate = selectedDate && availableDates.includes(selectedDate)
   : (availableDates[0] || '');
 const currentEntry = dateEntries.find(e => e.data.date === currentDate);
 const currentItems = currentEntry?.data.items || [];
+const currentTopicSummaries = currentEntry?.data.topic_summaries || [];
 
 const activeTopics = topics.filter(t => t.active);
 const archivedTopics = topics.filter(t => t.type === 'shortterm' && !t.active);
@@ -81,6 +82,14 @@ function calcWeight(item: typeof currentItems[0]): number {
   return weight;
 }
 
+function getItemSummary(item: typeof currentItems[0]): string {
+  return item.ai_summary || item.summary;
+}
+
+function getTopicSummary(topicId: string) {
+  return currentTopicSummaries.find(s => s.topic === topicId);
+}
+
 // top10 规则：权重排序 + 去重后取前10
 function getTop10(items: typeof currentItems, topicId: string) {
   const topicItems = items.filter(i => i.topic === topicId);
@@ -135,6 +144,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
       <!-- 板块内容：只展示 top10 -->
       {activeTopics.map(topic => {
         const top10 = getTop10(currentItems, topic.id);
+        const topicSummary = getTopicSummary(topic.id);
         return (
           <section id={topic.id} class="topic-section">
             <div class="topic-section-header">
@@ -146,6 +156,17 @@ function getTop10(items: typeof currentItems, topicId: string) {
               <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`} class="topic-more">查看全部 →</a>
             </div>
 
+            {topicSummary && (
+              <div class="topic-daily-brief">
+                <p>{topicSummary.summary}</p>
+                {topicSummary.highlights.length > 0 && (
+                  <ul>
+                    {topicSummary.highlights.map(highlight => <li>{highlight}</li>)}
+                  </ul>
+                )}
+              </div>
+            )}
+
             {top10.length > 0 ? (
               <div class="topic-list">
                 {top10.map((item, idx) => (
@@ -156,7 +177,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
                         <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
                         <span class="item-source">{item.source}</span>
                       </h3>
-                      <p class="item-summary">{item.summary}</p>
+                      <p class="item-summary">{getItemSummary(item)}</p>
                     </div>
                   </article>
                 ))}
