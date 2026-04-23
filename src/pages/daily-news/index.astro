@@ -105,7 +105,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
 }
 ---
 
-<BaseLayout title="每日新闻 - AK22AK" description="AK22AK 关注的每日资讯聚合" variant="news">
+<BaseLayout title="每日资讯 - AK22AK" description="AK22AK 关注的每日资讯聚合" variant="news">
   <div class="daily-news-layout daily-news-layout--with-summary">
     <!-- 侧边栏：板块导航 -->
     <aside class="sidebar">
@@ -119,12 +119,6 @@ function getTop10(items: typeof currentItems, topicId: string) {
             </a>
           ))}
         </nav>
-        <div class="sidebar-footer">
-          <a href="/daily-news/archive/" class="sidebar-link muted">
-            <span class="sidebar-icon">📂</span>
-            <span class="sidebar-name">全部归档</span>
-          </a>
-        </div>
         <Calendar dates={availableDates} currentDate={currentDate} />
       </div>
     </aside>
@@ -135,7 +129,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
       <header class="date-header">
         <div class="date-title">
           <span class="date-icon">📰</span>
-          <h1>每日早报 {currentDate.replace(/-/g, '.')}</h1>
+          <h1>每日资讯 {currentDate.replace(/-/g, '.')}</h1>
         </div>
         <span class="date-weekday">{currentWeekday}</span>
 
@@ -216,11 +210,22 @@ function getTop10(items: typeof currentItems, topicId: string) {
               </div>
               {topicSummary ? (
                 <>
-                  <p>{topicSummary.summary}</p>
-                  {topicSummary.highlights.length > 0 && (
-                    <ul>
-                      {topicSummary.highlights.slice(0, 6).map(highlight => <li>{highlight}</li>)}
-                    </ul>
+                  <div class={`summary-card-content ${topicSummary.highlights.length > 6 ? 'is-collapsed' : ''}`}>
+                    <p>{topicSummary.summary}</p>
+                    {topicSummary.highlights.length > 0 && (
+                      <ul>
+                        {topicSummary.highlights.map(highlight => <li>{highlight}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                  {topicSummary.highlights.length > 6 && (
+                    <button
+                      type="button"
+                      class="summary-card-toggle"
+                      aria-expanded="false"
+                    >
+                      展开全部
+                    </button>
                   )}
                 </>
               ) : (
@@ -248,6 +253,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
   const sections = document.querySelectorAll('.topic-section[id]');
   const sidebarLinks = document.querySelectorAll('.sidebar-link[href^="#"]');
   const summaryCards = document.querySelectorAll('.summary-card[data-summary-topic]');
+  const summaryToggleButtons = document.querySelectorAll('.summary-card-toggle');
 
   function setActiveTopic(topicId: string) {
     sidebarLinks.forEach(link => link.classList.remove('active'));
@@ -267,4 +273,16 @@ function getTop10(items: typeof currentItems, topicId: string) {
     });
   }, { rootMargin: '-20% 0px -60% 0px' });
   sections.forEach(section => observer.observe(section));
+
+  summaryToggleButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const card = button.closest('.summary-card');
+      const content = card?.querySelector('.summary-card-content');
+      if (!content) return;
+
+      const isCollapsed = content.classList.toggle('is-collapsed');
+      button.textContent = isCollapsed ? '展开全部' : '收起';
+      button.setAttribute('aria-expanded', String(!isCollapsed));
+    });
+  });
 </script>

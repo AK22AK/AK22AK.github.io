@@ -207,7 +207,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
 ---
 
 <BaseLayout title={`${topic.name} - 新闻详情 - AK22AK`} description={`AK22AK 关注的 ${topic.name} 资讯详情`} variant="news">
-  <div class="daily-news-layout">
+  <div class="daily-news-layout daily-news-layout--with-summary">
     <!-- 左侧导航 -->
     <aside class="sidebar">
       <div class="sidebar-inner">
@@ -270,7 +270,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
       </div>
 
       {currentTopicSummary && (
-        <section class="topic-section">
+        <section class="topic-section topic-inline-brief">
           <div class="topic-section-header">
             <h2>今日看点</h2>
           </div>
@@ -406,6 +406,36 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
         ))}
       </div>
     </main>
+
+    <aside class="summary-sidebar" aria-label={`${topic.name} 当日总结`}>
+      <div class="summary-sidebar-inner">
+        <article class="summary-card active" data-summary-topic={topic.id}>
+          <div class="summary-card-header">
+            <span class="summary-card-icon">📝</span>
+            <h2>{topic.name}总结</h2>
+          </div>
+          {currentTopicSummary ? (
+            <>
+              <div class={`summary-card-content ${currentTopicSummary.highlights.length > 6 ? 'is-collapsed' : ''}`}>
+                <p>{currentTopicSummary.summary}</p>
+                {currentTopicSummary.highlights.length > 0 && (
+                  <ul>
+                    {currentTopicSummary.highlights.map(highlight => <li>{highlight}</li>)}
+                  </ul>
+                )}
+              </div>
+              {currentTopicSummary.highlights.length > 6 && (
+                <button type="button" class="summary-card-toggle" aria-expanded="false">
+                  展开全部
+                </button>
+              )}
+            </>
+          ) : (
+            <p class="summary-empty">当日暂无板块总结</p>
+          )}
+        </article>
+      </div>
+    </aside>
   </div>
 </BaseLayout>
 
@@ -413,6 +443,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
   (function() {
     // 平滑滚动锚点定位
     const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const summaryToggleButtons = document.querySelectorAll('.summary-card-toggle');
 
     document.querySelectorAll('.sidebar-link[href^="#"]').forEach(link => {
       link.addEventListener('click', (e) => {
@@ -510,6 +541,18 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
 
     // 初始切换
     switchView();
+
+    summaryToggleButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const card = button.closest('.summary-card');
+        const content = card?.querySelector('.summary-card-content');
+        if (!content) return;
+
+        const isCollapsed = content.classList.toggle('is-collapsed');
+        button.textContent = isCollapsed ? '展开全部' : '收起';
+        button.setAttribute('aria-expanded', String(!isCollapsed));
+      });
+    });
 
     // 监听前进/后退
     window.addEventListener('popstate', switchView);
