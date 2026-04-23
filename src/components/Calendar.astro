@@ -61,7 +61,7 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
     grid-template-columns: repeat(7, 1fr);
     gap: 2px;
   }
-  .cal-day {
+  .calendar :global(.cal-day) {
     aspect-ratio: 1;
     display: flex;
     align-items: center;
@@ -72,24 +72,74 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
     color: #ccc;
     text-decoration: none;
   }
-  .cal-day.has-data {
+  .calendar :global(.cal-day.has-data) {
     color: #2563eb;
     font-weight: 600;
     cursor: pointer;
   }
-  .cal-day.has-data:hover {
+  .calendar :global(.cal-day.has-data:hover) {
     background: #eff6ff;
   }
-  .cal-day.active {
+  .calendar :global(.cal-day.active) {
     background: #2563eb;
     color: #fff;
     font-weight: 600;
   }
-  .cal-day.active:hover {
+  .calendar :global(.cal-day.active:hover) {
     background: #1d4ed8;
   }
-  .cal-day.today {
+  .calendar :global(.cal-day.today) {
     border: 1.5px solid #2563eb;
+  }
+
+  @media (max-width: 768px) {
+    .calendar {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+    }
+
+    .calendar-header {
+      margin-bottom: 0;
+      font-size: 0.85rem;
+    }
+
+    .cal-btn {
+      display: none;
+    }
+
+    .calendar-weekdays {
+      display: none;
+    }
+
+    .calendar-days {
+      display: flex;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding-top: 0.5rem;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .calendar :global(.cal-day) {
+      display: none;
+    }
+
+    .calendar :global(.cal-day.has-data) {
+      display: inline-flex;
+      flex: 0 0 auto;
+      min-width: 44px;
+      min-height: 34px;
+      aspect-ratio: auto;
+      padding: 0 0.75rem;
+      background: #f3f4f6;
+      border-radius: 999px;
+      color: #2563eb;
+      font-size: 0.78rem;
+    }
+
+    .calendar :global(.cal-day.active) {
+      background: #2563eb;
+      color: #fff;
+    }
   }
 </style>
 

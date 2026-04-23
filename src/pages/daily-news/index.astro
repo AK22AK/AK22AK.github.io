@@ -106,7 +106,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
 ---
 
 <BaseLayout title="每日新闻 - AK22AK" description="AK22AK 关注的每日资讯聚合" variant="news">
-  <div class="daily-news-layout">
+  <div class="daily-news-layout daily-news-layout--with-summary">
     <!-- 侧边栏：板块导航 -->
     <aside class="sidebar">
       <div class="sidebar-inner">
@@ -157,7 +157,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
             </div>
 
             {topicSummary && (
-              <div class="topic-daily-brief">
+              <div class="topic-daily-brief topic-inline-brief">
                 <p>{topicSummary.summary}</p>
                 {topicSummary.highlights.length > 0 && (
                   <ul>
@@ -203,6 +203,34 @@ function getTop10(items: typeof currentItems, topicId: string) {
         </section>
       )}
     </main>
+
+    <aside class="summary-sidebar" aria-label="当前板块总结">
+      <div class="summary-sidebar-inner">
+        {activeTopics.map((topic, idx) => {
+          const topicSummary = getTopicSummary(topic.id);
+          return (
+            <article class={`summary-card ${idx === 0 ? 'active' : ''}`} data-summary-topic={topic.id}>
+              <div class="summary-card-header">
+                <span class="summary-card-icon">{getTopicIcon(topic.id)}</span>
+                <h2>{topic.name}总结</h2>
+              </div>
+              {topicSummary ? (
+                <>
+                  <p>{topicSummary.summary}</p>
+                  {topicSummary.highlights.length > 0 && (
+                    <ul>
+                      {topicSummary.highlights.slice(0, 6).map(highlight => <li>{highlight}</li>)}
+                    </ul>
+                  )}
+                </>
+              ) : (
+                <p class="summary-empty">当日暂无板块总结</p>
+              )}
+            </article>
+          );
+        })}
+      </div>
+    </aside>
   </div>
 </BaseLayout>
 
@@ -219,12 +247,22 @@ function getTop10(items: typeof currentItems, topicId: string) {
 
   const sections = document.querySelectorAll('.topic-section[id]');
   const sidebarLinks = document.querySelectorAll('.sidebar-link[href^="#"]');
+  const summaryCards = document.querySelectorAll('.summary-card[data-summary-topic]');
+
+  function setActiveTopic(topicId: string) {
+    sidebarLinks.forEach(link => link.classList.remove('active'));
+    const activeLink = document.querySelector(`.sidebar-link[href="#${topicId}"]`);
+    if (activeLink) activeLink.classList.add('active');
+
+    summaryCards.forEach(card => {
+      card.classList.toggle('active', card.getAttribute('data-summary-topic') === topicId);
+    });
+  }
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
-        sidebarLinks.forEach(link => link.classList.remove('active'));
-        const activeLink = document.querySelector(`.sidebar-link[href="#${entry.target.id}"]`);
-        if (activeLink) activeLink.classList.add('active');
+        setActiveTopic(entry.target.id);
       }
     });
   }, { rootMargin: '-20% 0px -60% 0px' });
