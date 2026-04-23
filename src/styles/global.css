@@ -567,14 +567,20 @@ p {
 
 .topic-daily-brief ul {
   margin: 0.75rem 0 0;
-  padding-left: 1.2rem;
+  padding-left: 0;
+  list-style: none;
   color: #4b5563;
   font-size: 0.9rem;
   line-height: 1.6;
 }
 
-.topic-daily-brief li + li {
-  margin-top: 0.25rem;
+.topic-daily-brief li {
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.topic-daily-brief li:last-child {
+  border-bottom: none;
 }
 
 .item-rank {
