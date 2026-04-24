@@ -24,6 +24,18 @@ const dailyNews = defineCollection({
         highlights: z.array(z.string()),
       })
     ).optional(),
+    subtopic_summaries: z.record(
+      z.string(),
+      z.array(
+        z.object({
+          subtopic: z.string(),
+          name: z.string(),
+          summary: z.string(),
+          highlights: z.array(z.string()),
+          count: z.number().optional(),
+        })
+      )
+    ).optional(),
     items: z.array(
       z.object({
         title: z.string(),
@@ -32,6 +44,7 @@ const dailyNews = defineCollection({
         url: z.string().url(),
         source: z.string(),
         topic: z.string(),
+        subtopic: z.string().optional(),
         pub_time: z.string().optional(),
       })
     ),

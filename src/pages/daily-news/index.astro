@@ -33,7 +33,7 @@ const weekdayNames = ['周日','周一','周二','周三','周四','周五','周
 const currentWeekday = currentDate ? weekdayNames[new Date(currentDate).getDay()] : '';
 
 function getTopicIcon(id: string) {
-  const map: Record<string, string> = { tech: '🔥', game: '🎮', snooker: '🎱' };
+  const map: Record<string, string> = { tech: '🔥', game: '🎮', snooker: '🎱', sports: '🏟️' };
   return map[id] || '📰';
 }
 
@@ -302,3 +302,15 @@ function getTop10(items: typeof currentItems, topicId: string) {
     });
   });
 </script>
+
+<style>
+  .daily-news-layout--home .topic-section[id] {
+    scroll-margin-top: 96px;
+  }
+
+  @media (max-width: 768px) {
+    .daily-news-layout--home .topic-section[id] {
+      scroll-margin-top: 72px;
+    }
+  }
+</style>
