@@ -135,6 +135,11 @@ function getTopItems(items: typeof currentItems, count: number = 5) {
   return [...items].sort((a, b) => calcWeight(b) - calcWeight(a)).slice(0, count);
 }
 
+function shouldCollapseSummary(summary?: { summary: string; highlights: string[] }) {
+  if (!summary) return false;
+  return summary.summary.length > 150 || summary.highlights.length > 4;
+}
+
 // 获取展示用 items：当天权重排序 + 前一天补充
 type DisplayResult = {
   items: typeof currentItems;
@@ -207,7 +212,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
 ---
 
 <BaseLayout title={`${topic.name} - 新闻详情 - AK22AK`} description={`AK22AK 关注的 ${topic.name} 资讯详情`} variant="news">
-  <div class="daily-news-layout daily-news-layout--with-summary">
+  <div class="daily-news-layout daily-news-layout--with-summary daily-news-layout--topic">
     <!-- 左侧导航 -->
     <aside class="sidebar">
       <div class="sidebar-inner">
@@ -274,12 +279,19 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
           <div class="topic-section-header">
             <h2>今日看点</h2>
           </div>
-          <div class="topic-daily-brief">
-            <p>{currentTopicSummary.summary}</p>
-            {currentTopicSummary.highlights.length > 0 && (
-              <ul>
-                {currentTopicSummary.highlights.map(highlight => <li>{highlight}</li>)}
-              </ul>
+          <div class="topic-daily-brief summary-collapsible">
+            <div class={`summary-card-content ${shouldCollapseSummary(currentTopicSummary) ? 'is-collapsed' : ''}`}>
+              <p>{currentTopicSummary.summary}</p>
+              {currentTopicSummary.highlights.length > 0 && (
+                <ul>
+                  {currentTopicSummary.highlights.map(highlight => <li>{highlight}</li>)}
+                </ul>
+              )}
+            </div>
+            {shouldCollapseSummary(currentTopicSummary) && (
+              <button type="button" class="summary-card-toggle summary-card-toggle--inline" aria-expanded="false">
+                展开全部
+              </button>
             )}
           </div>
         </section>
@@ -416,7 +428,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
           </div>
           {currentTopicSummary ? (
             <>
-              <div class={`summary-card-content ${currentTopicSummary.highlights.length > 6 ? 'is-collapsed' : ''}`}>
+              <div class={`summary-card-content ${shouldCollapseSummary(currentTopicSummary) ? 'is-collapsed' : ''}`}>
                 <p>{currentTopicSummary.summary}</p>
                 {currentTopicSummary.highlights.length > 0 && (
                   <ul>
@@ -424,7 +436,7 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
                   </ul>
                 )}
               </div>
-              {currentTopicSummary.highlights.length > 6 && (
+              {shouldCollapseSummary(currentTopicSummary) && (
                 <button type="button" class="summary-card-toggle" aria-expanded="false">
                   展开全部
                 </button>
@@ -544,8 +556,8 @@ const sourceDetails: SourceDetail[] = sortedSources.map(src => {
 
     summaryToggleButtons.forEach(button => {
       button.addEventListener('click', () => {
-        const card = button.closest('.summary-card');
-        const content = card?.querySelector('.summary-card-content');
+        const container = button.closest('.summary-collapsible, .summary-card');
+        const content = container?.querySelector('.summary-card-content');
         if (!content) return;
 
         const isCollapsed = content.classList.toggle('is-collapsed');

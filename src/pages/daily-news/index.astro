@@ -90,6 +90,11 @@ function getTopicSummary(topicId: string) {
   return currentTopicSummaries.find(s => s.topic === topicId);
 }
 
+function shouldCollapseSummary(summary?: { summary: string; highlights: string[] }) {
+  if (!summary) return false;
+  return summary.summary.length > 150 || summary.highlights.length > 4;
+}
+
 // top10 规则：权重排序 + 去重后取前10
 function getTop10(items: typeof currentItems, topicId: string) {
   const topicItems = items.filter(i => i.topic === topicId);
@@ -106,7 +111,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
 ---
 
 <BaseLayout title="每日资讯 - AK22AK" description="AK22AK 关注的每日资讯聚合" variant="news">
-  <div class="daily-news-layout daily-news-layout--with-summary">
+  <div class="daily-news-layout daily-news-layout--with-summary daily-news-layout--home">
     <!-- 侧边栏：板块导航 -->
     <aside class="sidebar">
       <div class="sidebar-inner">
@@ -151,12 +156,23 @@ function getTop10(items: typeof currentItems, topicId: string) {
             </div>
 
             {topicSummary && (
-              <div class="topic-daily-brief topic-inline-brief">
-                <p>{topicSummary.summary}</p>
-                {topicSummary.highlights.length > 0 && (
-                  <ul>
-                    {topicSummary.highlights.map(highlight => <li>{highlight}</li>)}
-                  </ul>
+              <div class="topic-daily-brief topic-inline-brief summary-collapsible">
+                <div class={`summary-card-content ${shouldCollapseSummary(topicSummary) ? 'is-collapsed' : ''}`}>
+                  <p>{topicSummary.summary}</p>
+                  {topicSummary.highlights.length > 0 && (
+                    <ul>
+                      {topicSummary.highlights.map(highlight => <li>{highlight}</li>)}
+                    </ul>
+                  )}
+                </div>
+                {shouldCollapseSummary(topicSummary) && (
+                  <button
+                    type="button"
+                    class="summary-card-toggle summary-card-toggle--inline"
+                    aria-expanded="false"
+                  >
+                    展开全部
+                  </button>
                 )}
               </div>
             )}
@@ -210,18 +226,18 @@ function getTop10(items: typeof currentItems, topicId: string) {
               </div>
               {topicSummary ? (
                 <>
-                  <div class={`summary-card-content ${topicSummary.highlights.length > 6 ? 'is-collapsed' : ''}`}>
-                    <p>{topicSummary.summary}</p>
-                    {topicSummary.highlights.length > 0 && (
-                      <ul>
+              <div class={`summary-card-content ${shouldCollapseSummary(topicSummary) ? 'is-collapsed' : ''}`}>
+                <p>{topicSummary.summary}</p>
+                {topicSummary.highlights.length > 0 && (
+                  <ul>
                         {topicSummary.highlights.map(highlight => <li>{highlight}</li>)}
                       </ul>
                     )}
                   </div>
-                  {topicSummary.highlights.length > 6 && (
-                    <button
-                      type="button"
-                      class="summary-card-toggle"
+              {shouldCollapseSummary(topicSummary) && (
+                <button
+                  type="button"
+                  class="summary-card-toggle"
                       aria-expanded="false"
                     >
                       展开全部
@@ -276,8 +292,8 @@ function getTop10(items: typeof currentItems, topicId: string) {
 
   summaryToggleButtons.forEach(button => {
     button.addEventListener('click', () => {
-      const card = button.closest('.summary-card');
-      const content = card?.querySelector('.summary-card-content');
+      const container = button.closest('.summary-collapsible, .summary-card');
+      const content = container?.querySelector('.summary-card-content');
       if (!content) return;
 
       const isCollapsed = content.classList.toggle('is-collapsed');

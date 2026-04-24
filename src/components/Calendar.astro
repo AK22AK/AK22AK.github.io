@@ -1,6 +1,6 @@
 ---
 interface Props {
-  dates: string[];  // ['2026-04-20', '2026-04-19', ...]
+  dates: string[];
   currentDate?: string;
   baseUrl?: string;
 }
@@ -9,15 +9,23 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
 ---
 
 <div class="calendar" data-dates={JSON.stringify(dates)} data-current={currentDate || ''} data-base={baseUrl}>
-  <div class="calendar-header">
-    <button class="cal-btn cal-prev" type="button" aria-label="上月">‹</button>
-    <span class="cal-month"></span>
-    <button class="cal-btn cal-next" type="button" aria-label="下月">›</button>
+  <div class="calendar-mobile-bar">
+    <button class="cal-mobile-toggle" type="button" aria-label="切换日期" aria-expanded="false">
+      <span aria-hidden="true">🗓</span>
+    </button>
   </div>
-  <div class="calendar-weekdays">
-    <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+
+  <div class="calendar-panel">
+    <div class="calendar-header">
+      <button class="cal-btn cal-prev" type="button" aria-label="上月">‹</button>
+      <span class="cal-month"></span>
+      <button class="cal-btn cal-next" type="button" aria-label="下月">›</button>
+    </div>
+    <div class="calendar-weekdays">
+      <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
+    </div>
+    <div class="calendar-days"></div>
   </div>
-  <div class="calendar-days"></div>
 </div>
 
 <style>
@@ -25,6 +33,10 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
     margin-top: 1rem;
     padding-top: 1rem;
     border-top: 1px solid #e5e7eb;
+  }
+  .calendar-mobile-bar,
+  .cal-mobile-toggle {
+    display: none;
   }
   .calendar-header {
     display: flex;
@@ -94,8 +106,53 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
 
   @media (max-width: 768px) {
     .calendar {
-      margin-top: 0.75rem;
-      padding-top: 0.75rem;
+      position: relative;
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+
+    .calendar-mobile-bar {
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    .cal-mobile-toggle {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border: 1px solid #dbe3f0;
+      border-radius: 999px;
+      background: #fff;
+      color: #2563eb;
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+    }
+
+    .calendar.is-open .cal-mobile-toggle {
+      background: #eff6ff;
+    }
+
+    .calendar-panel {
+      display: none;
+      position: absolute;
+      top: calc(100% + 0.45rem);
+      left: 0;
+      z-index: 20;
+      width: min(320px, calc(100vw - 2rem));
+      padding: 0.75rem;
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .calendar.is-open .calendar-panel {
+      display: block;
     }
 
     .calendar-header {
@@ -127,7 +184,7 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
       display: inline-flex;
       flex: 0 0 auto;
       min-width: 44px;
-      min-height: 34px;
+      min-height: 38px;
       aspect-ratio: auto;
       padding: 0 0.75rem;
       background: #f3f4f6;
@@ -144,76 +201,100 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
 </style>
 
 <script>
-  (function() {
-    const calendar = document.querySelector('.calendar');
-    if (!calendar) return;
+  (() => {
+    document.querySelectorAll('.calendar').forEach((calendar) => {
+      const dates = JSON.parse(calendar.getAttribute('data-dates') || '[]');
+      const currentDate = calendar.getAttribute('data-current') || '';
+      const dateSet = new Set(dates);
 
-    const dates: string[] = JSON.parse(calendar.getAttribute('data-dates') || '[]');
-    const currentDate = calendar.getAttribute('data-current') || '';
-    const dateSet = new Set(dates);
+      const monthEl = calendar.querySelector('.cal-month');
+      const daysEl = calendar.querySelector('.calendar-days');
+      const prevBtn = calendar.querySelector('.cal-prev');
+      const nextBtn = calendar.querySelector('.cal-next');
+      const toggleBtn = calendar.querySelector('.cal-mobile-toggle');
 
-    const monthEl = calendar.querySelector('.cal-month') as HTMLElement;
-    const daysEl = calendar.querySelector('.calendar-days') as HTMLElement;
-    const prevBtn = calendar.querySelector('.cal-prev') as HTMLButtonElement;
-    const nextBtn = calendar.querySelector('.cal-next') as HTMLButtonElement;
+      if (!(monthEl instanceof HTMLElement) || !(daysEl instanceof HTMLElement)) return;
+      if (!(prevBtn instanceof HTMLButtonElement) || !(nextBtn instanceof HTMLButtonElement)) return;
 
-    let year: number, month: number;
+      let year;
+      let month;
 
-    // 初始显示当前月份（优先取 currentDate 所在月，或今天）
-    const initDate = currentDate ? new Date(currentDate + 'T00:00:00') : new Date();
-    year = initDate.getFullYear();
-    month = initDate.getMonth();
+      const initDate = currentDate ? new Date(`${currentDate}T00:00:00`) : new Date();
+      year = initDate.getFullYear();
+      month = initDate.getMonth();
 
-    function render() {
-      monthEl.textContent = `${year}年${month + 1}月`;
-      daysEl.innerHTML = '';
+      function render() {
+        monthEl.textContent = `${year}年${month + 1}月`;
+        daysEl.innerHTML = '';
 
-      const firstDay = new Date(year, month, 1).getDay();
-      const daysInMonth = new Date(year, month + 1, 0).getDate();
-      const today = new Date();
-      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+        const firstDay = new Date(year, month, 1).getDay();
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const today = new Date();
+        const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-      // 空白占位
-      for (let i = 0; i < firstDay; i++) {
-        const span = document.createElement('span');
-        daysEl.appendChild(span);
-      }
-
-      for (let d = 1; d <= daysInMonth; d++) {
-        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        const hasData = dateSet.has(dateStr);
-        const isActive = dateStr === currentDate;
-        const isToday = dateStr === todayStr;
-
-        const el = document.createElement(hasData ? 'a' : 'span');
-        el.className = 'cal-day';
-        el.textContent = String(d);
-
-        if (hasData) {
-          el.classList.add('has-data');
-          const base = calendar.getAttribute('data-base') || '/daily-news/';
-          const sep = base.includes('?') ? '&' : '?';
-          (el as HTMLAnchorElement).href = `${base}${sep}date=${dateStr}`;
+        for (let i = 0; i < firstDay; i++) {
+          const span = document.createElement('span');
+          daysEl.appendChild(span);
         }
-        if (isActive) el.classList.add('active');
-        if (isToday && !isActive) el.classList.add('today');
 
-        daysEl.appendChild(el);
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const hasData = dateSet.has(dateStr);
+          const isActive = dateStr === currentDate;
+          const isToday = dateStr === todayStr;
+
+          const el = document.createElement(hasData ? 'a' : 'span');
+          el.className = 'cal-day';
+          el.textContent = String(d);
+
+          if (hasData) {
+            el.classList.add('has-data');
+            const base = calendar.getAttribute('data-base') || '/daily-news/';
+            const sep = base.includes('?') ? '&' : '?';
+            el.href = `${base}${sep}date=${dateStr}`;
+          }
+
+          if (isActive) el.classList.add('active');
+          if (isToday && !isActive) el.classList.add('today');
+          daysEl.appendChild(el);
+        }
       }
-    }
 
-    prevBtn.addEventListener('click', () => {
-      month--;
-      if (month < 0) { month = 11; year--; }
+      prevBtn.addEventListener('click', () => {
+        month--;
+        if (month < 0) {
+          month = 11;
+          year--;
+        }
+        render();
+      });
+
+      nextBtn.addEventListener('click', () => {
+        month++;
+        if (month > 11) {
+          month = 0;
+          year++;
+        }
+        render();
+      });
+
+      if (toggleBtn instanceof HTMLButtonElement) {
+        toggleBtn.addEventListener('click', () => {
+          const isOpen = calendar.classList.toggle('is-open');
+          toggleBtn.setAttribute('aria-expanded', String(isOpen));
+        });
+      }
+
+      document.addEventListener('click', (event) => {
+        if (!calendar.classList.contains('is-open')) return;
+        if (calendar.contains(event.target)) return;
+        calendar.classList.remove('is-open');
+        if (toggleBtn instanceof HTMLButtonElement) {
+          toggleBtn.setAttribute('aria-expanded', 'false');
+        }
+      });
+
       render();
     });
-
-    nextBtn.addEventListener('click', () => {
-      month++;
-      if (month > 11) { month = 0; year++; }
-      render();
-    });
-
-    render();
   })();
 </script>
