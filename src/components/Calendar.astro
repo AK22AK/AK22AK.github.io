@@ -84,6 +84,9 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
     color: #ccc;
     text-decoration: none;
   }
+  .calendar :global(.cal-day.other-month) {
+    color: #e5e7eb;
+  }
   .calendar :global(.cal-day.has-data) {
     color: #2563eb;
     font-weight: 600;
@@ -143,8 +146,8 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
       top: calc(100% + 0.45rem);
       left: 0;
       z-index: 20;
-      width: min(320px, calc(100vw - 2rem));
-      padding: 0.75rem;
+      width: min(340px, calc(100vw - 2rem));
+      padding: 1rem;
       background: #fff;
       border: 1px solid #e5e7eb;
       border-radius: 12px;
@@ -156,41 +159,35 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
     }
 
     .calendar-header {
-      margin-bottom: 0;
-      font-size: 0.85rem;
-    }
-
-    .cal-btn {
-      display: none;
+      margin-bottom: 0.75rem;
+      font-size: 1rem;
     }
 
     .calendar-weekdays {
-      display: none;
+      display: grid;
+      margin-bottom: 0.45rem;
+      font-size: 0.72rem;
     }
 
     .calendar-days {
-      display: flex;
-      gap: 0.4rem;
-      overflow-x: auto;
-      padding-top: 0.5rem;
-      -webkit-overflow-scrolling: touch;
+      display: grid;
+      gap: 0.25rem;
+      overflow: visible;
+      padding-top: 0;
     }
 
     .calendar :global(.cal-day) {
-      display: none;
+      display: flex;
+      min-width: 0;
+      min-height: 36px;
+      aspect-ratio: 1;
+      padding: 0;
+      border-radius: 8px;
+      font-size: 0.82rem;
     }
 
     .calendar :global(.cal-day.has-data) {
-      display: inline-flex;
-      flex: 0 0 auto;
-      min-width: 44px;
-      min-height: 38px;
-      aspect-ratio: auto;
-      padding: 0 0.75rem;
-      background: #f3f4f6;
-      border-radius: 999px;
       color: #2563eb;
-      font-size: 0.78rem;
     }
 
     .calendar :global(.cal-day.active) {
@@ -228,24 +225,21 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
         daysEl.innerHTML = '';
 
         const firstDay = new Date(year, month, 1).getDay();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
         const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
         const today = new Date();
         const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
-        for (let i = 0; i < firstDay; i++) {
-          const span = document.createElement('span');
-          daysEl.appendChild(span);
-        }
-
-        for (let d = 1; d <= daysInMonth; d++) {
-          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        function appendDay(dayYear, dayMonth, dayNumber, isOtherMonth = false) {
+          const dateStr = `${dayYear}-${String(dayMonth + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`;
           const hasData = dateSet.has(dateStr);
           const isActive = dateStr === currentDate;
           const isToday = dateStr === todayStr;
 
           const el = document.createElement(hasData ? 'a' : 'span');
           el.className = 'cal-day';
-          el.textContent = String(d);
+          el.textContent = String(dayNumber);
 
           if (hasData) {
             el.classList.add('has-data');
@@ -254,9 +248,24 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
             el.href = `${base}${sep}date=${dateStr}`;
           }
 
+          if (isOtherMonth) el.classList.add('other-month');
           if (isActive) el.classList.add('active');
           if (isToday && !isActive) el.classList.add('today');
           daysEl.appendChild(el);
+        }
+
+        for (let i = firstDay; i > 0; i--) {
+          const prevDate = new Date(year, month - 1, daysInPrevMonth - i + 1);
+          appendDay(prevDate.getFullYear(), prevDate.getMonth(), prevDate.getDate(), true);
+        }
+
+        for (let d = 1; d <= daysInMonth; d++) {
+          appendDay(year, month, d);
+        }
+
+        for (let d = 1; daysEl.children.length < totalCells; d++) {
+          const nextDate = new Date(year, month + 1, d);
+          appendDay(nextDate.getFullYear(), nextDate.getMonth(), nextDate.getDate(), true);
         }
       }
 

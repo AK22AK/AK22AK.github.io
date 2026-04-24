@@ -54,9 +54,18 @@ button:focus-visible {
 }
 
 .logo {
+  display: inline-flex;
+  align-items: center;
   font-size: 1.25rem;
   font-weight: 700;
+  line-height: 1;
   color: #111;
+}
+
+.logo-module {
+  margin-left: 0.2em;
+  font-size: 0.9em;
+  font-weight: 700;
 }
 
 .nav {
