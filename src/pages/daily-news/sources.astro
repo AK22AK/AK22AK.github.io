@@ -1,0 +1,96 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Calendar from '../../components/Calendar.astro';
+import { getCollection } from 'astro:content';
+import fs from 'node:fs';
+import path from 'node:path';
+import {
+  buildSourceMeta,
+  groupItemsBySource,
+  readSourcesIndex,
+} from '../../lib/dailyNews';
+
+const topicsPath = path.resolve('./src/data/daily-news-topics.json');
+const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
+const topics = topicsConfig.topics as Array<{
+  id: string; name: string; sources: Array<{id: string; name: string; url: string}>;
+}>;
+
+const newsData = await getCollection('daily-news');
+const dateEntries = newsData.filter(entry => entry.id !== 'topics');
+dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
+
+const url = new URL(Astro.request.url);
+const selectedDate = url.searchParams.get('date');
+const availableDates = dateEntries.map(e => e.data.date);
+const currentDate = selectedDate && availableDates.includes(selectedDate)
+  ? selectedDate
+  : (availableDates[0] || '');
+const currentEntry = dateEntries.find(e => e.data.date === currentDate);
+const currentItems = currentEntry?.data.items || [];
+const sourceMeta = buildSourceMeta(topics);
+const sourcesIndex = readSourcesIndex();
+const sourceIndexMatchesCurrentDate = sourcesIndex?.date === currentDate;
+const dailySourceGroups = groupItemsBySource(currentItems, sourcesIndex, currentDate, sourceMeta);
+
+const topicNameMap = new Map(topics.map(topic => [topic.id, topic.name]));
+const totalFromGroups = dailySourceGroups.reduce((sum, group) => sum + group.count, 0);
+---
+
+<BaseLayout title="来源审查 - AK22AK 资讯" description="按日期查看每日资讯抓取到的全部来源链接" variant="news">
+  <div class="daily-news-layout">
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <div style="margin-bottom: 1rem;">
+          <a href={`/daily-news/?date=${currentDate}`} class="back-link">← 返回每日资讯</a>
+        </div>
+        <h3 class="sidebar-title">🗓 日期</h3>
+        <Calendar dates={availableDates} currentDate={currentDate} baseUrl="/daily-news/sources/" />
+      </div>
+    </aside>
+
+    <main class="daily-main">
+      <header class="date-header">
+        <div class="date-title">
+          <span class="date-icon">🔎</span>
+          <h1>来源审查 {currentDate.replace(/-/g, '.')}</h1>
+        </div>
+        <p class="date-desc">
+          当日抓取 {currentItems.length} 条，按 {dailySourceGroups.length} 个来源分组。
+          {sourceIndexMatchesCurrentDate ? '来源索引已匹配当前日期。' : '当前日期未匹配来源索引，以下按新闻条目生成。'}
+        </p>
+      </header>
+
+      {dailySourceGroups.length > 0 ? (
+        <section class="source-audit-section">
+          <div class="topic-section-header">
+            <h2>本日全部新闻来源</h2>
+            <span class="source-audit-total">{totalFromGroups} 条</span>
+          </div>
+          <div class="source-audit-groups">
+            {dailySourceGroups.map(group => (
+              <article class="source-audit-group">
+                <header class="source-audit-header">
+                  <div>
+                    <h3>{group.name}</h3>
+                    <p>{group.id} · {topicNameMap.get(group.topic) || group.topic}</p>
+                  </div>
+                  <span>{group.count} 条</span>
+                </header>
+                <ol class="source-audit-list">
+                  {group.items.map(item => (
+                    <li>
+                      <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
+                    </li>
+                  ))}
+                </ol>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <div class="topic-empty">当前日期暂无来源数据</div>
+      )}
+    </main>
+  </div>
+</BaseLayout>

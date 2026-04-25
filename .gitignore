@@ -27,3 +27,4 @@ pnpm-debug.log*
 # auto-synced news data (from AK22AK/daily-news-data)
 src/content/daily-news/*.json
 src/data/daily-news-topics.json
+src/data/daily-news-sources-index.json

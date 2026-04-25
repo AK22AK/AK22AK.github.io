@@ -27,6 +27,7 @@ jobs:
           mkdir -p src/content/daily-news
           cp /tmp/news-data/data/daily-news/*.json src/content/daily-news/ 2>/dev/null || true
           cp /tmp/news-data/data/topics.json src/data/daily-news-topics.json
+          cp /tmp/news-data/data/sources_index.json src/data/daily-news-sources-index.json 2>/dev/null || true
 
       - name: Setup Node
         uses: actions/setup-node@v6

@@ -4,13 +4,30 @@ import Calendar from '../../components/Calendar.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
+import {
+  buildSourceMeta,
+  formatDateLabel,
+  getClusterHeatFlames,
+  getDisplayQualityReasons,
+  getLeadClusters,
+  getSourceName,
+  getSubtopicName,
+  getSubtopicIcon,
+  getTopicReport,
+  getTopicClusters,
+  getTopicIcon,
+  getTopItems,
+  getWeekdayLabel,
+  normalizeDailyBrief,
+  normalizeStoryClusters,
+  resolveClusterRefs,
+  type DailyNewsData,
+  type TopicConfig,
+} from '../../lib/dailyNews';
 
 const topicsPath = path.resolve('./src/data/daily-news-topics.json');
 const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
-const topics = topicsConfig.topics as Array<{
-  id: string; name: string; type: string; description: string;
-  active: boolean; sources: Array<{id: string; name: string; url: string}>;
-}>;
+const topics = topicsConfig.topics as TopicConfig[];
 
 const newsData = await getCollection('daily-news');
 const dateEntries = newsData.filter(entry => entry.id !== 'topics');
@@ -23,171 +40,198 @@ const currentDate = selectedDate && availableDates.includes(selectedDate)
   ? selectedDate
   : (availableDates[0] || '');
 const currentEntry = dateEntries.find(e => e.data.date === currentDate);
-const currentItems = currentEntry?.data.items || [];
-const currentTopicSummaries = currentEntry?.data.topic_summaries || [];
+const currentData = currentEntry?.data as DailyNewsData | undefined;
+const currentItems = currentData?.items || [];
+const activeTopics = topics.filter(topic => topic.active !== false);
+const archivedTopics = topics.filter(topic => topic.type === 'shortterm' && topic.active === false);
+const sourceMeta = buildSourceMeta(topics);
+const dailyBrief = normalizeDailyBrief(currentData, activeTopics);
+const storyClusters = normalizeStoryClusters(currentData, activeTopics);
+const shortTermTopicIds = new Set(activeTopics.filter(topic => topic.type === 'shortterm').map(topic => topic.id));
+const leadClusters = getLeadClusters(storyClusters.filter(cluster => !shortTermTopicIds.has(cluster.topic)), 4);
+const currentWeekday = getWeekdayLabel(currentDate);
 
-const activeTopics = topics.filter(t => t.active);
-const archivedTopics = topics.filter(t => t.type === 'shortterm' && !t.active);
-
-const weekdayNames = ['周日','周一','周二','周三','周四','周五','周六'];
-const currentWeekday = currentDate ? weekdayNames[new Date(currentDate).getDay()] : '';
-
-function getTopicIcon(id: string) {
-  const map: Record<string, string> = { tech: '🔥', game: '🎮', snooker: '🎱', sports: '🏟️' };
-  return map[id] || '📰';
+function topicItemCount(topicId: string) {
+  return currentItems.filter(item => item.topic === topicId).length;
 }
 
-// ===== 权重排序系统 =====
-const BRAND_KEYWORDS = [
-  '苹果', 'iPhone', 'iPad', 'Mac', '小米', '华为', '三星', 'OPPO', 'vivo',
-  '谷歌', 'Pixel', '特斯拉', '比亚迪', 'OpenAI', 'ChatGPT', 'Claude',
-  '英伟达', 'NVIDIA', 'AMD', '英特尔', '微软', 'Meta', 'Steam',
-  '腾讯', '阿里', '字节', '百度', '网易', 'B站', '哔哩哔哩',
-  '微信', '抖音', '淘宝', '京东', '拼多多',
-  '马云', '马化腾', '雷军', '马斯克',
-  '宁德时代', '大疆',
-];
-
-function hasBrandKeyword(title: string): boolean {
-  return BRAND_KEYWORDS.some(kw => title.includes(kw));
-}
-
-function hasNumber(title: string): boolean {
-  return /\d/.test(title);
-}
-
-function isMorningPost(title: string): boolean {
-  const t = title.toLowerCase();
-  const keywords = ['早报', '派早报', 'morning', '晨读', '今日早报'];
-  return keywords.some(kw => t.includes(kw));
-}
-
-function hoursAgo(pubTime: string | undefined): number {
-  if (!pubTime) return 48;
-  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(pubTime);
-  const pub = new Date(hasTimezone ? pubTime : `${pubTime}Z`);
-  if (Number.isNaN(pub.getTime())) return 48;
-  const now = new Date();
-  return Math.max(0, (now.getTime() - pub.getTime()) / (1000 * 60 * 60));
-}
-
-function calcWeight(item: typeof currentItems[0]): number {
-  const title = item.title;
-  let weight = 0;
-  if (isMorningPost(title)) weight += 1000;
-  if (hasBrandKeyword(title)) weight += 10;
-  if (hasNumber(title)) weight += 5;
-  const h = hoursAgo(item.pub_time);
-  weight += (1 / (h + 1)) * 50;
-  return weight;
-}
-
-function getItemSummary(item: typeof currentItems[0]): string {
-  return item.ai_summary || item.summary;
-}
-
-function getTopicSummary(topicId: string) {
-  return currentTopicSummaries.find(s => s.topic === topicId);
-}
-
-function shouldCollapseSummary(summary?: { summary: string; highlights: string[] }) {
-  if (!summary) return false;
-  return summary.summary.length > 150 || summary.highlights.length > 4;
-}
-
-// top10 规则：权重排序 + 去重后取前10
-function getTop10(items: typeof currentItems, topicId: string) {
-  const topicItems = items.filter(i => i.topic === topicId);
-  const seen = new Set();
-  const deduped = [];
-  for (const item of topicItems) {
-    if (!seen.has(item.title)) {
-      seen.add(item.title);
-      deduped.push(item);
-    }
-  }
-  return deduped.sort((a, b) => calcWeight(b) - calcWeight(a)).slice(0, 10);
+function topicSourceCount(topicId: string) {
+  return new Set(currentItems.filter(item => item.topic === topicId).map(item => item.source)).size;
 }
 ---
 
 <BaseLayout title="每日资讯 - AK22AK" description="AK22AK 关注的每日资讯聚合" variant="news">
-  <div class="daily-news-layout daily-news-layout--with-summary daily-news-layout--home">
-    <!-- 侧边栏：板块导航 -->
+  <div class="daily-news-layout daily-news-layout--brief daily-news-layout--home">
     <aside class="sidebar">
       <div class="sidebar-inner">
-        <h3 class="sidebar-title">📖 板块导航</h3>
-        <nav class="sidebar-nav">
+        <h3 class="sidebar-title">板块</h3>
+        <nav class="sidebar-nav" aria-label="板块导航">
+          <a href="#brief" class="sidebar-link active">
+            <span class="sidebar-icon">◇</span>
+            <span class="sidebar-name">今日简报</span>
+          </a>
           {activeTopics.map(topic => (
             <a href={`#${topic.id}`} class="sidebar-link">
               <span class="sidebar-icon">{getTopicIcon(topic.id)}</span>
               <span class="sidebar-name">{topic.name}</span>
+              <span class="sidebar-count">{topicItemCount(topic.id)}</span>
             </a>
           ))}
         </nav>
         <Calendar dates={availableDates} currentDate={currentDate} />
+        <div class="sidebar-footer">
+          <a href={`/daily-news/sources/?date=${currentDate}`} class="sidebar-link muted">
+            来源审查
+          </a>
+        </div>
       </div>
     </aside>
 
-    <!-- 主内容区 -->
     <main class="daily-main">
-      <!-- 日期头部 -->
-      <header class="date-header">
-        <div class="date-title">
-          <span class="date-icon">📰</span>
-          <h1>每日资讯 {currentDate.replace(/-/g, '.')}</h1>
+      <header id="brief" class="news-brief-hero">
+        <div class="brief-kicker">
+          <span>{formatDateLabel(currentDate)}</span>
+          {currentWeekday && <span>{currentWeekday}</span>}
+          {currentData?.update_time && <span>更新 {new Date(currentData.update_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>}
         </div>
-        <span class="date-weekday">{currentWeekday}</span>
-
+        <h1>{dailyBrief.title}</h1>
+        <p>{dailyBrief.summary || '当前日期暂无可展示的简报内容。'}</p>
+        {dailyBrief.key_points.length > 0 && (
+          <ol class="brief-key-points">
+            {dailyBrief.key_points.map(point => <li>{point}</li>)}
+          </ol>
+        )}
+        {leadClusters.length > 0 && (
+          <div class="brief-hot-block">
+            <h2>今日热门</h2>
+            <div class="brief-hot-list">
+            {leadClusters.map(cluster => {
+              const topic = activeTopics.find(t => t.id === cluster.topic);
+              const qualityReasons = getDisplayQualityReasons(cluster);
+              const refItems = resolveClusterRefs(currentItems, cluster, 3);
+              return (
+                <article class={`brief-hot-item story-cluster-card--${cluster.importance}`}>
+                  <div class="cluster-meta">
+                    <span>{topic?.name || cluster.topic}</span>
+                    {cluster.subtopic && <span>{getSubtopicIcon(cluster.subtopic)} {getSubtopicName(topic, cluster.subtopic)}</span>}
+                    <span class="heat-chip" title="今日热度">{getClusterHeatFlames(cluster)}</span>
+                  </div>
+                  <h3>
+                    <a href={`/daily-news/topic/${cluster.topic}/?date=${currentDate}#cluster-${cluster.id}`}>
+                      {cluster.title}
+                    </a>
+                  </h3>
+                  <p>{cluster.summary}</p>
+                  {qualityReasons.length > 0 && (
+                    <div class="quality-chip-row">
+                      {qualityReasons.map(reason => <span>{reason}</span>)}
+                    </div>
+                  )}
+                  {refItems.length > 0 && (
+                    <details class="cluster-ref-list cluster-ref-list--compact">
+                      <summary>查看 {refItems.length} 条引用</summary>
+                      {refItems.map(item => (
+                        <a href={item.url} target="_blank" rel="noopener noreferrer">
+                          <span>{getSourceName(item.source, sourceMeta)}</span>
+                          <strong>{item.title}</strong>
+                        </a>
+                      ))}
+                    </details>
+                  )}
+                </article>
+              );
+            })}
+            </div>
+          </div>
+        )}
       </header>
 
-      <!-- 板块内容：只展示 top10 -->
       {activeTopics.map(topic => {
-        const top10 = getTop10(currentItems, topic.id);
-        const topicSummary = getTopicSummary(topic.id);
+        const report = getTopicReport(currentData, topic.id);
+        const topicSummary = currentData?.topic_summaries?.find(summary => summary.topic === topic.id);
+        const clusters = getTopicClusters(storyClusters, topic.id).slice(0, 3);
+        const fallbackItems = getTopItems(currentItems.filter(item => item.topic === topic.id), 3);
+        const count = topicItemCount(topic.id);
         return (
-          <section id={topic.id} class="topic-section">
+          <section id={topic.id} class="topic-section topic-overview-section">
             <div class="topic-section-header">
               <h2>
                 <span class="topic-section-icon">{getTopicIcon(topic.id)}</span>
                 {topic.name}
-                <span class="top10-badge">TOP10</span>
               </h2>
-              <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`} class="topic-more">查看全部 →</a>
+              <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`} class="topic-more">
+                深入阅读 →
+              </a>
             </div>
-
-            {topicSummary && (
-              <div class="topic-daily-brief topic-inline-brief summary-collapsible">
-                <div class={`summary-card-content ${shouldCollapseSummary(topicSummary) ? 'is-collapsed' : ''}`}>
-                  <p>{topicSummary.summary}</p>
-                  {topicSummary.highlights.length > 0 && (
-                    <ul>
-                      {topicSummary.highlights.map(highlight => <li>{highlight}</li>)}
-                    </ul>
-                  )}
+            <div class="topic-overview-meta">
+              <span>{count} 条原始资讯</span>
+              <span>{topicSourceCount(topic.id)} 个来源</span>
+              {topic.subtopics?.length ? <span>{topic.subtopics.length} 个栏目</span> : <span>临时专题</span>}
+            </div>
+            {topic.type === 'shortterm' ? (
+              <article class="topic-report-preview">
+                <div class="cluster-meta">
+                  <span>专题晨报</span>
+                  <span>{report ? '结构化摘要' : '旧数据摘要'}</span>
                 </div>
-                {shouldCollapseSummary(topicSummary) && (
-                  <button
-                    type="button"
-                    class="summary-card-toggle summary-card-toggle--inline"
-                    aria-expanded="false"
-                  >
-                    展开全部
-                  </button>
-                )}
+                <h3>
+                  <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`}>
+                    {report?.title || topicSummary?.highlights?.[0] || topic.name}
+                  </a>
+                </h3>
+                <p>{report?.summary || topicSummary?.summary || topic.description}</p>
+                {report?.sections?.length ? (
+                  <div class="report-preview-grid">
+                    {report.sections.slice(0, 4).map(section => <span>{section.title}</span>)}
+                  </div>
+                ) : topicSummary?.highlights?.length ? (
+                  <div class="report-preview-grid">
+                    {topicSummary.highlights.slice(0, 3).map(point => <span>{point}</span>)}
+                  </div>
+                ) : null}
+              </article>
+            ) : clusters.length > 0 ? (
+              <div class="story-cluster-list story-cluster-list--compact">
+                {clusters.map(cluster => {
+                  const refItems = resolveClusterRefs(currentItems, cluster, 3);
+                  return (
+                    <article class="story-cluster-row">
+                      <div class="cluster-meta">
+                        {cluster.subtopic && <span>{getSubtopicIcon(cluster.subtopic)} {getSubtopicName(topic, cluster.subtopic)}</span>}
+                        <span>{cluster.importance === 'lead' ? '主线' : cluster.importance === 'major' ? '重点' : '补充'}</span>
+                        <span class="heat-chip" title="今日热度">{getClusterHeatFlames(cluster)}</span>
+                      </div>
+                      <h3>
+                        <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}#cluster-${cluster.id}`}>
+                          {cluster.title}
+                        </a>
+                      </h3>
+                      <p>{cluster.summary}</p>
+                      {refItems.length > 0 && (
+                        <details class="cluster-ref-list cluster-ref-list--compact">
+                          <summary>查看 {refItems.length} 条引用</summary>
+                          {refItems.map(item => (
+                            <a href={item.url} target="_blank" rel="noopener noreferrer">
+                              <span>{getSourceName(item.source, sourceMeta)}</span>
+                              <strong>{item.title}</strong>
+                            </a>
+                          ))}
+                        </details>
+                      )}
+                    </article>
+                  );
+                })}
               </div>
-            )}
-
-            {top10.length > 0 ? (
+            ) : fallbackItems.length > 0 ? (
               <div class="topic-list">
-                {top10.map((item, idx) => (
+                {fallbackItems.map(item => (
                   <article class="topic-item">
-                    <span class="item-rank">{idx + 1}</span>
                     <div class="item-body">
                       <h3 class="item-title">
                         <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
-                        <span class="item-source">{item.source}</span>
+                        <span class="item-source">{sourceMeta.get(item.source)?.name || item.source}</span>
                       </h3>
-                      <p class="item-summary">{getItemSummary(item)}</p>
+                      <p class="item-summary">{item.ai_summary || item.summary}</p>
                     </div>
                   </article>
                 ))}
@@ -201,7 +245,7 @@ function getTop10(items: typeof currentItems, topicId: string) {
 
       {archivedTopics.length > 0 && (
         <section class="topic-section">
-          <h2>🗄 已归档板块</h2>
+          <h2>已归档板块</h2>
           <div class="archived-grid">
             {archivedTopics.map(topic => (
               <a href={`/daily-news/topic/${topic.id}/`} class="card archived-card">
@@ -213,102 +257,43 @@ function getTop10(items: typeof currentItems, topicId: string) {
         </section>
       )}
     </main>
-
-    <aside class="summary-sidebar" aria-label="当前板块总结">
-      <div class="summary-sidebar-inner">
-        {activeTopics.map((topic, idx) => {
-          const topicSummary = getTopicSummary(topic.id);
-          return (
-            <article class={`summary-card ${idx === 0 ? 'active' : ''}`} data-summary-topic={topic.id}>
-              <div class="summary-card-header">
-                <span class="summary-card-icon">{getTopicIcon(topic.id)}</span>
-                <h2>{topic.name}总结</h2>
-              </div>
-              {topicSummary ? (
-                <>
-              <div class={`summary-card-content ${shouldCollapseSummary(topicSummary) ? 'is-collapsed' : ''}`}>
-                <p>{topicSummary.summary}</p>
-                {topicSummary.highlights.length > 0 && (
-                  <ul>
-                        {topicSummary.highlights.map(highlight => <li>{highlight}</li>)}
-                      </ul>
-                    )}
-                  </div>
-              {shouldCollapseSummary(topicSummary) && (
-                <button
-                  type="button"
-                  class="summary-card-toggle"
-                      aria-expanded="false"
-                    >
-                      展开全部
-                    </button>
-                  )}
-                </>
-              ) : (
-                <p class="summary-empty">当日暂无板块总结</p>
-              )}
-            </article>
-          );
-        })}
-      </div>
-    </aside>
   </div>
 </BaseLayout>
 
 <script>
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const sidebarLinks = document.querySelectorAll('.sidebar-link[href^="#"]');
+  const sections = document.querySelectorAll('#brief, .topic-section[id]');
 
-  document.querySelectorAll('.sidebar-link[href^="#"]').forEach(link => {
-    link.addEventListener('click', (e) => {
-      e.preventDefault();
-      const target = document.querySelector(link.getAttribute('href')!);
-      if (target) target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+  sidebarLinks.forEach(link => {
+    link.addEventListener('click', (event) => {
+      const href = link.getAttribute('href');
+      if (!href) return;
+      const target = document.querySelector(href);
+      if (!target) return;
+      event.preventDefault();
+      target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
     });
   });
-
-  const sections = document.querySelectorAll('.topic-section[id]');
-  const sidebarLinks = document.querySelectorAll('.sidebar-link[href^="#"]');
-  const summaryCards = document.querySelectorAll('.summary-card[data-summary-topic]');
-  const summaryToggleButtons = document.querySelectorAll('.summary-card-toggle');
-
-  function setActiveTopic(topicId: string) {
-    sidebarLinks.forEach(link => link.classList.remove('active'));
-    const activeLink = document.querySelector(`.sidebar-link[href="#${topicId}"]`);
-    if (activeLink) activeLink.classList.add('active');
-
-    summaryCards.forEach(card => {
-      card.classList.toggle('active', card.getAttribute('data-summary-topic') === topicId);
-    });
-  }
 
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        setActiveTopic(entry.target.id);
-      }
+      if (!entry.isIntersecting) return;
+      sidebarLinks.forEach(link => link.classList.toggle('active', link.getAttribute('href') === `#${entry.target.id}`));
     });
-  }, { rootMargin: '-20% 0px -60% 0px' });
+  }, { rootMargin: '-20% 0px -65% 0px' });
+
   sections.forEach(section => observer.observe(section));
-
-  summaryToggleButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      const container = button.closest('.summary-collapsible, .summary-card');
-      const content = container?.querySelector('.summary-card-content');
-      if (!content) return;
-
-      const isCollapsed = content.classList.toggle('is-collapsed');
-      button.textContent = isCollapsed ? '展开全部' : '收起';
-      button.setAttribute('aria-expanded', String(!isCollapsed));
-    });
-  });
 </script>
 
 <style>
+  #brief,
   .daily-news-layout--home .topic-section[id] {
     scroll-margin-top: 96px;
   }
 
   @media (max-width: 768px) {
+    #brief,
     .daily-news-layout--home .topic-section[id] {
       scroll-margin-top: 72px;
     }

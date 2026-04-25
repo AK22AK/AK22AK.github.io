@@ -54,7 +54,13 @@ mkdir -p "$PROJECT_ROOT/src/content/daily-news"
 # 同步数据
 cp "$DATA_REPO/data/daily-news"/*.json "$PROJECT_ROOT/src/content/daily-news/"
 cp "$DATA_REPO/data/topics.json" "$PROJECT_ROOT/src/data/daily-news-topics.json"
+if [ -f "$DATA_REPO/data/sources_index.json" ]; then
+    cp "$DATA_REPO/data/sources_index.json" "$PROJECT_ROOT/src/data/daily-news-sources-index.json"
+fi
 
 echo "✅ 数据同步完成"
 echo "   新闻数据: src/content/daily-news/"
 echo "   板块配置: src/data/daily-news-topics.json"
+if [ -f "$PROJECT_ROOT/src/data/daily-news-sources-index.json" ]; then
+    echo "   来源索引: src/data/daily-news-sources-index.json"
+fi
