@@ -48,7 +48,8 @@ Highlights should be ordered by reading priority, not by topic order. A normal d
 Each highlight must link to one of:
 
 - A specific `dailyLine` anchor inside a topic page.
-- A specific temporary topic/special page.
+- A specific subtopic anchor inside a topic page.
+- A specific temporary special page only when a deeper page is truly needed.
 - A topic page when no finer anchor is available.
 
 Each highlight should include:
@@ -63,35 +64,35 @@ Highlights must not be isolated summaries. A reader who clicks a highlight shoul
 
 ## Topics
 
-The Topics section provides entry points into topic pages and temporary special pages.
+The Topics section provides entry points into topic pages.
 
 Each topic row should include:
 
 - Topic name
 - Lightweight counts, such as raw items and source count
 - A short list of tags/entities for scanning
-- Link to the topic or special page
+- Link to the topic page
 
 Examples:
 
 - `科技` with tags such as `AI / 芯片 / 汽车 / 工具`
-- `体育` with tags such as `阿森纳 / 网球 / 综合体育`
-- `斯诺克` as a temporary special when a major event is active
+- `体育` with tags such as `阿森纳 / 斯诺克世锦赛 / 网球 / NBA`
 
 The home page should not show all sources for each topic. Sources belong at the bottom of the corresponding topic page.
 
 ## Temporary Specials
 
-Some topics are not permanent top-level topics but deserve a temporary page during an active event or concentrated news cycle.
+Some concentrated news cycles may deserve a temporary page, but the threshold should be high.
 
 Examples:
 
-- Snooker World Championship
 - A major tournament
 - A major launch event
 - A short-lived breaking-news cluster
 
-Temporary specials can appear in both Today Highlights and Topics. They should be visually treated like topic entries, but their metadata should make the temporary nature clear, such as `专题晨报`, `赛程 / 赛果 / 焦点战`, or `临时专题`.
+Sports tournaments and major events should default to active subtopics inside the sports page. For example, Snooker World Championship appears as a sports subtopic, not as a peer of Sports on the home page.
+
+If an event becomes large enough to need a deeper temporary page, the home page should still prefer linking to the corresponding topic-page subtopic anchor. The topic page can then link onward to the deeper temporary page.
 
 ## Archive
 
@@ -105,7 +106,7 @@ The home page is upstream from topic pages:
 
 - Home highlights point into topic pages.
 - Topic pages provide overview, morning briefs, daily lines, other worthwhile items, and sources.
-- Home topic rows point to topic pages or temporary special pages.
+- Home topic rows point to topic pages.
 
 The home page must not duplicate topic-page sources or detailed summaries. It should only carry enough context for navigation.
 
@@ -132,9 +133,10 @@ type DailyNewsHome = {
     summary: string;
     label: string;
     target: {
-      type: "topic" | "dailyLine" | "special";
+      type: "topic" | "dailyLine" | "subtopic" | "special";
       topicSlug?: string;
       dailyLineId?: string;
+      subtopicId?: string;
       specialSlug?: string;
       href: string;
     };
@@ -142,7 +144,7 @@ type DailyNewsHome = {
   topics: Array<{
     slug: string;
     name: string;
-    kind: "regular" | "special";
+    kind: "regular";
     href: string;
     rawItems: number;
     sources?: number;
@@ -158,13 +160,14 @@ type DailyNewsHome = {
 
 Rules:
 
-- `highlights[*].target.href` must resolve to a real topic page, daily-line anchor, or temporary special page.
+- `highlights[*].target.href` must resolve to a real topic page, daily-line anchor, subtopic anchor, or truly needed temporary special page.
 - Prefer `target.type = "dailyLine"` when the highlight maps to a topic-page daily line.
-- Use `target.type = "special"` for temporary event pages such as a major tournament special.
+- Use `target.type = "subtopic"` when the highlight maps to a sports subtopic such as Snooker World Championship.
+- Use `target.type = "special"` only when a separate temporary page is truly needed.
 - The home page must not expose topic-level source lists.
 - The home page must not generate a forced cross-topic headline.
 - Topic tags are for scanning only; they do not create fixed sub-navigation.
 
 ## Open Scope
 
-This spec finalizes the daily news home page information architecture. It does not finalize the sports topic page, temporary special page templates, personal site homepage, article pages, or full Astro implementation details.
+This spec finalizes the daily news home page information architecture. It does not finalize personal site homepage, article pages, or full Astro implementation details.
