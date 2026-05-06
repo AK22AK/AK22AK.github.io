@@ -234,25 +234,47 @@ const matchStatusLabels: Record<string, string> = {
             <div class="daily-section-head">
               <h2>今日主线</h2>
             </div>
-            {genericView!.dailyLines.map(line => (
-              <article id={line.id} class="daily-story-group daily-anchor">
-                <div class="daily-group-head">
-                  <div>
-                    <h2>{line.title}</h2>
-                    <p>{line.summary}</p>
+            {genericView!.dailyLines.map(line => {
+              const sourceNames = Array.from(new Set(line.refs.map(ref => getSourceName(ref.item.source, sourceMeta))));
+              const refsId = `refs-${line.id}`;
+              return (
+                <article id={line.id} class="daily-story-group daily-anchor">
+                  <div class="daily-group-head">
+                    <div>
+                      <h2>{line.title}</h2>
+                      <p>{line.summary}</p>
+                    </div>
                   </div>
-                </div>
-                <div class="daily-story-list">
-                  {line.refs.map(ref => (
-                    <a class="daily-story" href={ref.item.url} target="_blank" rel="noopener noreferrer">
-                      <strong>{ref.item.title}</strong>
-                      <p>{ref.note || ref.item.ai_summary || ref.item.summary}</p>
-                      <em>{getSourceName(ref.item.source, sourceMeta)}</em>
-                    </a>
-                  ))}
-                </div>
-              </article>
-            ))}
+                  <div class="daily-ref-details">
+                    <div class="daily-ref-controls">
+                      <button
+                        class="daily-ref-toggle"
+                        type="button"
+                        aria-label="展开引用"
+                        aria-expanded="false"
+                        aria-controls={refsId}
+                        data-daily-ref-toggle
+                      >
+                        <svg aria-hidden="true" viewBox="0 0 16 16">
+                          <path d="M6 4l4 4-4 4" />
+                        </svg>
+                      </button>
+                      <span class="daily-ref-chip-row" aria-label={`${line.refs.length} 条引用来源`}>
+                        {sourceNames.map(name => <span>{name}</span>)}
+                      </span>
+                    </div>
+                    <div id={refsId} class="daily-ref-list" hidden>
+                      {line.refs.map(ref => (
+                        <a class="daily-ref-link" href={ref.item.url} target="_blank" rel="noopener noreferrer">
+                          <span>{getSourceName(ref.item.source, sourceMeta)}</span>
+                          <strong>{ref.item.title}</strong>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
           </section>
         </>
       )}
@@ -334,6 +356,17 @@ const matchStatusLabels: Record<string, string> = {
     link.addEventListener('click', () => {
       const href = link.getAttribute('href') || '';
       if (href.startsWith('#')) setActive(href.slice(1), true);
+    });
+  });
+  document.querySelectorAll('[data-daily-ref-toggle]').forEach(button => {
+    const controls = button.getAttribute('aria-controls');
+    const panel = controls ? document.getElementById(controls) : null;
+    if (!panel) return;
+    button.addEventListener('click', () => {
+      const expanded = button.getAttribute('aria-expanded') === 'true';
+      button.setAttribute('aria-expanded', String(!expanded));
+      button.setAttribute('aria-label', expanded ? '展开引用' : '收起引用');
+      panel.hidden = expanded;
     });
   });
   updateActive();

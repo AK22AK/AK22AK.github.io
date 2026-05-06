@@ -2232,9 +2232,9 @@ body:has(.daily-redesign) .nav a:hover {
 
 .daily-redesign {
   display: grid;
-  grid-template-columns: 210px minmax(0, 760px);
-  gap: 76px;
-  width: min(1100px, calc(100vw - 72px));
+  grid-template-columns: 200px minmax(0, 690px);
+  gap: 66px;
+  width: min(980px, calc(100vw - 72px));
   margin: 0 auto;
   padding: 58px 0 90px;
   color: #282522;
@@ -2243,7 +2243,7 @@ body:has(.daily-redesign) .nav a:hover {
 }
 
 .daily-redesign--single {
-  grid-template-columns: 210px minmax(0, 780px);
+  grid-template-columns: 200px minmax(0, 710px);
 }
 
 .daily-side {
@@ -2336,7 +2336,7 @@ body:has(.daily-redesign) .nav a:hover {
   padding: 0 14px;
   border-radius: 8px;
   color: #5a554f;
-  font-weight: 560;
+  font-weight: 500;
 }
 
 .daily-side-nav a:hover {
@@ -2348,7 +2348,7 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-side-nav a.active {
   color: #fff;
   background: #28231f;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .daily-side-nav small {
@@ -2386,7 +2386,7 @@ body:has(.daily-redesign) .nav a:hover {
   margin: 0 0 18px;
   color: #171514;
   font-size: clamp(2.45rem, 4.6vw, 3.85rem);
-  font-weight: 700;
+  font-weight: 650;
   line-height: 1.05;
   letter-spacing: 0;
 }
@@ -2429,7 +2429,7 @@ body:has(.daily-redesign) .nav a:hover {
   margin: 0;
   color: #25221f;
   font-size: 1.28rem;
-  font-weight: 620;
+  font-weight: 580;
   line-height: 1.25;
 }
 
@@ -2496,7 +2496,7 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-rank {
   color: #aaa39c;
   font-size: 0.96rem;
-  font-weight: 560;
+  font-weight: 500;
   line-height: 1.4;
 }
 
@@ -2509,13 +2509,13 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-match-row strong {
   color: #292522;
   font-size: 1.08rem;
-  font-weight: 560;
+  font-weight: 500;
   line-height: 1.45;
 }
 
 .daily-story strong,
 .daily-morning-list strong {
-  font-weight: 600;
+  font-weight: 540;
 }
 
 .daily-highlight-list p,
@@ -2525,7 +2525,7 @@ body:has(.daily-redesign) .nav a:hover {
   margin: 8px 0 0;
   color: #5f5a54;
   font-size: 0.98rem;
-  font-weight: 430;
+  font-weight: 400;
   line-height: 1.72;
 }
 
@@ -2616,7 +2616,7 @@ body:has(.daily-redesign) .nav a:hover {
   margin: 0;
   color: #25221f;
   font-size: 1.4rem;
-  font-weight: 650;
+  font-weight: 580;
   line-height: 1.35;
 }
 
@@ -2667,6 +2667,124 @@ body:has(.daily-redesign) .nav a:hover {
   padding: 22px 0;
   border-bottom: 1px solid #ece6dd;
   color: inherit;
+}
+
+.daily-ref-details {
+  margin-top: 18px;
+}
+
+.daily-ref-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  max-width: 100%;
+  color: #8f8982;
+}
+
+.daily-ref-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #9a9289;
+  cursor: pointer;
+}
+
+.daily-ref-toggle svg {
+  display: block;
+  width: 15px;
+  height: 15px;
+}
+
+.daily-ref-toggle path {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.daily-ref-toggle:hover {
+  color: #625b53;
+}
+
+.daily-ref-toggle[aria-expanded='true'] svg {
+  transform: rotate(90deg);
+}
+
+.daily-ref-toggle:focus-visible {
+  outline: 2px solid #d8cfc3;
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.daily-ref-chip-row span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid #e5ded3;
+  border-radius: 999px;
+  background: #fbfaf7;
+  color: #8d857d;
+  font-size: 0.86rem;
+  font-weight: 500;
+  line-height: 1;
+  cursor: default;
+}
+
+.daily-ref-chip-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.daily-ref-list:not([hidden]) {
+  margin-bottom: 14px;
+}
+
+.daily-ref-list {
+  display: grid;
+  margin-top: 14px;
+  border-top: 1px solid #ece6dd;
+}
+
+.daily-ref-list[hidden] {
+  display: none;
+}
+
+.daily-ref-link {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr);
+  gap: 16px;
+  align-items: baseline;
+  padding: 13px 0;
+  border-bottom: 1px solid #ece6dd;
+  color: inherit;
+}
+
+.daily-ref-link:hover {
+  color: inherit;
+  text-decoration: none;
+}
+
+.daily-ref-link span {
+  color: #aaa39c;
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+
+.daily-ref-link strong {
+  color: #292522;
+  font-size: 0.98rem;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .daily-match-list {
@@ -2953,13 +3071,13 @@ body:has(.daily-redesign) .nav a:hover {
   .daily-morning-list strong,
   .daily-other-list strong,
   .daily-topic-row strong {
-    font-size: 1.06rem;
+    font-size: 1.04rem;
     line-height: 1.42;
   }
 
   .daily-story strong,
   .daily-morning-list strong {
-    font-size: 1.08rem;
+    font-size: 1.06rem;
   }
 
   .daily-highlight-list p,
@@ -2998,6 +3116,20 @@ body:has(.daily-redesign) .nav a:hover {
   .daily-story-list,
   .daily-match-list {
     margin-left: 0;
+  }
+
+  .daily-ref-details {
+    margin-top: 16px;
+  }
+
+  .daily-ref-controls {
+    width: 100%;
+  }
+
+  .daily-ref-link {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 13px 0;
   }
 
   .daily-match-row {
