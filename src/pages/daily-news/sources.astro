@@ -1,20 +1,22 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import Calendar from '../../components/Calendar.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
   buildSourceMeta,
+  formatDateLabel,
+  formatUpdateTime,
+  getDailyNewsHomeHref,
+  getWeekdayLabel,
   groupItemsBySource,
   readSourcesIndex,
+  type TopicConfig,
 } from '../../lib/dailyNews';
 
 const topicsPath = path.resolve('./src/data/daily-news-topics.json');
 const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
-const topics = topicsConfig.topics as Array<{
-  id: string; name: string; sources: Array<{id: string; name: string; url: string}>;
-}>;
+const topics = topicsConfig.topics as TopicConfig[];
 
 const newsData = await getCollection('daily-news');
 const dateEntries = newsData.filter(entry => entry.id !== 'topics');
@@ -22,75 +24,143 @@ dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
 
 const url = new URL(Astro.request.url);
 const selectedDate = url.searchParams.get('date');
-const availableDates = dateEntries.map(e => e.data.date);
+const availableDates = dateEntries.map(entry => entry.data.date);
 const currentDate = selectedDate && availableDates.includes(selectedDate)
   ? selectedDate
   : (availableDates[0] || '');
-const currentEntry = dateEntries.find(e => e.data.date === currentDate);
+const currentIndex = availableDates.indexOf(currentDate);
+const previousDate = availableDates[currentIndex + 1];
+const nextDate = currentIndex > 0 ? availableDates[currentIndex - 1] : undefined;
+const currentEntry = dateEntries.find(entry => entry.data.date === currentDate);
 const currentItems = currentEntry?.data.items || [];
 const sourceMeta = buildSourceMeta(topics);
 const sourcesIndex = readSourcesIndex();
-const sourceIndexMatchesCurrentDate = sourcesIndex?.date === currentDate;
 const dailySourceGroups = groupItemsBySource(currentItems, sourcesIndex, currentDate, sourceMeta);
-
 const topicNameMap = new Map(topics.map(topic => [topic.id, topic.name]));
-const totalFromGroups = dailySourceGroups.reduce((sum, group) => sum + group.count, 0);
+const dateLabel = formatDateLabel(currentDate);
+const weekdayLabel = getWeekdayLabel(currentDate);
+const updatedAtLabel = formatUpdateTime(currentEntry?.data.update_time);
+const updateText = updatedAtLabel ? `${weekdayLabel} · ${updatedAtLabel}` : weekdayLabel;
 ---
 
-<BaseLayout title="来源审查 - AK22AK 资讯" description="按日期查看每日资讯抓取到的全部来源链接" variant="news">
-  <div class="daily-news-layout">
-    <aside class="sidebar">
-      <div class="sidebar-inner">
-        <div style="margin-bottom: 1rem;">
-          <a href={`/daily-news/?date=${currentDate}`} class="back-link">← 返回每日资讯</a>
+<BaseLayout title={`来源 - ${dateLabel} 日报 - AK22AK`} description="按来源查看每日资讯原文" variant="news">
+  <div class="daily-redesign daily-redesign--single">
+    <aside class="daily-side">
+      <a class="daily-back-link" href={getDailyNewsHomeHref(currentDate)}>← 返回日报</a>
+      <section class="daily-date-block">
+        <p class="daily-side-label">Daily</p>
+        <div class="daily-date-line">
+          {previousDate ? <a href={`/daily-news/sources/?date=${previousDate}`} aria-label="前一天">‹</a> : <span></span>}
+          <strong>{dateLabel}</strong>
+          {nextDate ? <a href={`/daily-news/sources/?date=${nextDate}`} aria-label="后一天">›</a> : <span></span>}
         </div>
-        <h3 class="sidebar-title">🗓 日期</h3>
-        <Calendar dates={availableDates} currentDate={currentDate} baseUrl="/daily-news/sources/" />
-      </div>
+        <p>{updateText} 更新</p>
+      </section>
+      <section>
+        <p class="daily-side-label">On This Page</p>
+        <nav class="daily-side-nav" aria-label="来源导航">
+          <a class="active" href="#sources" data-daily-section-link><span>来源</span><small>{dailySourceGroups.length}</small></a>
+          <a href="#archive" data-daily-section-link><span>归档</span><small>→</small></a>
+        </nav>
+      </section>
     </aside>
 
-    <main class="daily-main">
-      <header class="date-header">
-        <div class="date-title">
-          <span class="date-icon">🔎</span>
-          <h1>来源审查 {currentDate.replace(/-/g, '.')}</h1>
+    <main class="daily-content">
+      <div class="daily-mobile-date">
+        <span>‹ {dateLabel} ›</span>
+        <span>{updateText}</span>
+      </div>
+      <nav class="daily-mobile-picker" aria-label="来源快捷导航">
+        <a class="active" href="#sources" data-daily-section-link>来源</a>
+        <a href="#archive" data-daily-section-link>归档</a>
+      </nav>
+
+      <header class="daily-hero">
+        <div class="daily-meta">
+          <span>{currentItems.length} 条原文</span>
+          <span>{dailySourceGroups.length} 个来源</span>
         </div>
-        <p class="date-desc">
-          当日抓取 {currentItems.length} 条，按 {dailySourceGroups.length} 个来源分组。
-          {sourceIndexMatchesCurrentDate ? '来源索引已匹配当前日期。' : '当前日期未匹配来源索引，以下按新闻条目生成。'}
-        </p>
+        <h1>来源</h1>
+        <p>这里保留当天抓取到的全部原文入口。正式日报页面只展示阅读后的组织结果，来源页用于回查和审计。</p>
       </header>
 
-      {dailySourceGroups.length > 0 ? (
-        <section class="source-audit-section">
-          <div class="topic-section-header">
-            <h2>本日全部新闻来源</h2>
-            <span class="source-audit-total">{totalFromGroups} 条</span>
-          </div>
-          <div class="source-audit-groups">
-            {dailySourceGroups.map(group => (
-              <article class="source-audit-group">
-                <header class="source-audit-header">
-                  <div>
-                    <h3>{group.name}</h3>
-                    <p>{group.id} · {topicNameMap.get(group.topic) || group.topic}</p>
-                  </div>
-                  <span>{group.count} 条</span>
-                </header>
-                <ol class="source-audit-list">
-                  {group.items.map(item => (
-                    <li>
-                      <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
-                    </li>
-                  ))}
-                </ol>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : (
-        <div class="topic-empty">当前日期暂无来源数据</div>
-      )}
+      <section id="sources" class="daily-section daily-anchor">
+        <div class="daily-section-head">
+          <h2>当日来源</h2>
+          <span>按来源分组</span>
+        </div>
+        <div class="daily-source-list">
+          {dailySourceGroups.map(group => (
+            <div class="daily-source-row">
+              <strong>{group.name}</strong>
+              <span>{topicNameMap.get(group.topic) || group.topic}</span>
+              <em>{group.count} 条</em>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="archive" class="daily-section daily-anchor">
+        <div class="daily-section-head">
+          <h2>归档</h2>
+          <span>切换日期</span>
+        </div>
+        <div class="daily-archive-list">
+          {availableDates.slice(0, 8).map(date => (
+            <a href={`/daily-news/sources/?date=${date}`} class={date === currentDate ? 'active' : ''}>{formatDateLabel(date)}</a>
+          ))}
+          <a href="/daily-news/archive/">更多日期</a>
+        </div>
+      </section>
     </main>
   </div>
 </BaseLayout>
+
+<script>
+  const links = Array.from(document.querySelectorAll('[data-daily-section-link]'));
+  const ids = links
+    .map(link => link.getAttribute('href'))
+    .filter((href) => href?.startsWith('#'))
+    .map((href) => href.slice(1));
+  const sections = Array.from(new Set(ids))
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+  let ticking = false;
+  let activeId = '';
+
+  function setActive(id, center = false) {
+    if (activeId === id && !center) return;
+    activeId = id;
+    links.forEach(link => {
+      const isActive = link.getAttribute('href') === `#${id}`;
+      link.classList.toggle('active', isActive);
+      if (isActive && center && link.closest('.daily-mobile-picker')) {
+        link.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
+      }
+    });
+  }
+
+  function updateActive() {
+    ticking = false;
+    let nextId = sections[0]?.id || '';
+    const offset = window.innerWidth <= 900 ? 170 : 142;
+    sections.forEach(section => {
+      if (section.getBoundingClientRect().top <= offset) nextId = section.id;
+    });
+    if (nextId) setActive(nextId, false);
+  }
+
+  document.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(updateActive);
+  }, { passive: true });
+  window.addEventListener('resize', updateActive);
+  links.forEach(link => {
+    link.addEventListener('click', () => {
+      const href = link.getAttribute('href') || '';
+      if (href.startsWith('#')) setActive(href.slice(1), true);
+    });
+  });
+  updateActive();
+</script>

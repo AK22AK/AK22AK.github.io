@@ -31,19 +31,17 @@ fi
 if [ -d "$DATA_REPO/.git" ]; then
     echo "🔄 更新数据仓库: $DATA_REPO"
     if [ -n "$(git -C "$DATA_REPO" status --porcelain)" ]; then
-        echo "❌ 数据仓库存在本地未提交修改，已停止同步: $DATA_REPO"
-        echo "   请先提交、暂存或清理 daily-news-data 的本地改动，再重新运行。"
-        exit 1
-    fi
+        echo "⚠️ 数据仓库存在本地未提交修改，跳过远端更新，仅同步当前工作树: $DATA_REPO"
+    else
+        CURRENT_BRANCH="$(git -C "$DATA_REPO" branch --show-current)"
+        if [ -z "$CURRENT_BRANCH" ]; then
+            echo "❌ 数据仓库当前不在分支上，已停止同步: $DATA_REPO"
+            exit 1
+        fi
 
-    CURRENT_BRANCH="$(git -C "$DATA_REPO" branch --show-current)"
-    if [ -z "$CURRENT_BRANCH" ]; then
-        echo "❌ 数据仓库当前不在分支上，已停止同步: $DATA_REPO"
-        exit 1
+        git -C "$DATA_REPO" fetch origin "$CURRENT_BRANCH"
+        git -C "$DATA_REPO" pull --ff-only origin "$CURRENT_BRANCH"
     fi
-
-    git -C "$DATA_REPO" fetch origin "$CURRENT_BRANCH"
-    git -C "$DATA_REPO" pull --ff-only origin "$CURRENT_BRANCH"
 else
     echo "⚠️ 数据目录不是 Git 仓库，仅执行本地文件同步: $DATA_REPO"
 fi

@@ -77,6 +77,9 @@ export type SubtopicSectionGroup = {
 export type DailyNewsData = {
   date: string;
   update_time?: string;
+  daily_home?: DailyNewsHomeContract;
+  topic_pages?: Record<string, GenericTopicPageContract>;
+  sports_page?: SportsTopicPageContract;
   daily_brief?: DailyBrief;
   story_clusters?: Array<Partial<StoryCluster> & {
     id: string;
@@ -96,6 +99,113 @@ export type DailyNewsData = {
   subtopic_sections?: Record<string, Record<string, { sections: DigestSection[] }>>;
   topic_reports?: Record<string, TopicReport>;
   items: DailyNewsItem[];
+};
+
+export type DailyNewsHomeTarget = {
+  type: 'topic' | 'dailyLine' | 'subtopic' | 'special';
+  topicSlug?: string;
+  dailyLineId?: string;
+  subtopicId?: string;
+  specialSlug?: string;
+  href?: string;
+};
+
+export type DailyNewsHomeContract = {
+  intro: string;
+  stats?: {
+    rawItems?: number;
+    topics?: number;
+    highlights?: number;
+  };
+  highlights: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    label: string;
+    target: DailyNewsHomeTarget;
+  }>;
+};
+
+export type RefEntry = {
+  id?: string;
+  ref: NewsRef;
+  label?: string;
+  note?: string;
+};
+
+export type GenericTopicPageContract = {
+  stats?: {
+    rawItems?: number;
+    sources?: number;
+    dailyLines?: number;
+  };
+  overview: Array<{
+    id: string;
+    dailyLineId: string;
+    text: string;
+  }>;
+  morningBriefs: Array<{
+    id: string;
+    title: string;
+    url: string;
+    source: string;
+  }>;
+  dailyLines: Array<{
+    id: string;
+    title: string;
+    summary: string;
+    tags: string[];
+    items: RefEntry[];
+  }>;
+  otherItems: RefEntry[];
+  sources?: Array<{
+    id?: string;
+    name: string;
+    count: number;
+    description?: string;
+  }>;
+};
+
+export type SportsTopicPageContract = {
+  stats?: {
+    rawItems?: number;
+    sources?: number;
+    subtopics?: number;
+  };
+  overview: Array<{
+    id: string;
+    subtopicId: string;
+    text: string;
+  }>;
+  subtopics: Array<{
+    id: string;
+    label: string;
+    title: string;
+    summary: string;
+    kind: 'sport' | 'league' | 'team' | 'tournament' | 'athletes' | 'mixed';
+    matchStatus?: Array<{
+      id: string;
+      timeLabel: 'yesterday' | 'last_night' | 'this_morning' | 'today' | 'tonight';
+      title: string;
+      competition?: string;
+      startTime?: string;
+      home?: string;
+      away?: string;
+      score?: string;
+      note?: string;
+      status: 'result' | 'fixture';
+      url?: string;
+    }>;
+    items: RefEntry[];
+    deeperPageHref?: string;
+  }>;
+  otherItems: RefEntry[];
+  sources?: Array<{
+    id?: string;
+    name: string;
+    count: number;
+    description?: string;
+  }>;
 };
 
 export type SourcesIndex = {
@@ -141,12 +251,13 @@ const SUBTOPIC_ICONS: Record<string, string> = {
   'developer-tools': '🛠️',
   business: '🏢',
   community: '💬',
-  arsenal: '🔴',
-  'intl-football': '⚽',
-  nba: '🏀',
-  f1: '🏎️',
+  football: '⚽',
+  'snooker-world-championship': '🎱',
+  basketball: '🏀',
+  racing: '🏎️',
   tennis: '🎾',
-  'general-sports': '🏅',
+  'asian-athletes': '🏅',
+  other: '•',
 };
 
 const IMPORTANCE_RANK: Record<StoryCluster['importance'], number> = {
@@ -662,4 +773,196 @@ export function groupItemsBySource(
       };
     })
     .filter((group): group is NonNullable<typeof group> => Boolean(group));
+}
+
+export function getTopicHref(topicId: string, date: string) {
+  return `/daily-news/topic/${topicId}/?date=${date}`;
+}
+
+export function getTopicAnchorHref(topicId: string, date: string, anchor: string) {
+  return `${getTopicHref(topicId, date)}#${anchor}`;
+}
+
+export function getDailyNewsHomeHref(date: string) {
+  return `/daily-news/?date=${date}`;
+}
+
+function requireContract<T>(value: T | undefined, name: string): T {
+  if (!value) {
+    throw new Error(`Missing daily news contract field: ${name}`);
+  }
+  return value;
+}
+
+function resolveRefItem(items: DailyNewsItem[], ref: NewsRef) {
+  if (typeof ref === 'number') {
+    return items.find(item => item._idx === ref) || items[ref - 1] || items[ref];
+  }
+
+  const numeric = Number(ref);
+  if (Number.isFinite(numeric) && String(numeric) === ref.trim()) {
+    return items.find(item => item._idx === numeric) || items[numeric - 1] || items[numeric];
+  }
+
+  return items.find(item => item.url === ref);
+}
+
+function resolveViewRef(items: DailyNewsItem[], entry: RefEntry) {
+  const item = resolveRefItem(items, entry.ref);
+  if (!item) {
+    throw new Error(`Unable to resolve daily news ref: ${String(entry.ref)}`);
+  }
+  return {
+    id: entry.id || `ref-${String(entry.ref)}`,
+    ref: entry.ref,
+    label: entry.label,
+    note: entry.note,
+    item,
+  };
+}
+
+function resolveHomeTarget(target: DailyNewsHomeTarget, date: string) {
+  if (target.href) return target.href;
+
+  if (target.type === 'dailyLine' && target.topicSlug && target.dailyLineId) {
+    return getTopicAnchorHref(target.topicSlug, date, target.dailyLineId);
+  }
+
+  if (target.type === 'subtopic' && target.topicSlug && target.subtopicId) {
+    return getTopicAnchorHref(target.topicSlug, date, target.subtopicId);
+  }
+
+  if (target.type === 'topic' && target.topicSlug) {
+    return getTopicHref(target.topicSlug, date);
+  }
+
+  if (target.type === 'special' && target.specialSlug) {
+    return `/daily-news/special/${target.specialSlug}/?date=${date}`;
+  }
+
+  throw new Error(`Invalid daily home target: ${JSON.stringify(target)}`);
+}
+
+export function formatUpdateTime(updateTime: string | undefined) {
+  if (!updateTime) return '';
+  const date = new Date(updateTime);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+export function buildDailyNewsHomeView(
+  data: DailyNewsData,
+  topics: TopicConfig[],
+  archiveDates: string[],
+) {
+  const home = requireContract(data.daily_home, 'daily_home');
+  const activeTopicIds = new Set(['tech', 'sports']);
+  const readerTopics = topics
+    .filter(topic => topic.active !== false && activeTopicIds.has(topic.id))
+    .map(topic => {
+      const topicItems = data.items.filter(item => item.topic === topic.id);
+      return {
+        id: topic.id,
+        name: topic.name,
+        href: getTopicHref(topic.id, data.date),
+        rawItems: topicItems.length,
+        sources: new Set(topicItems.map(item => item.source)).size,
+        tags: (topic.subtopics || []).slice(0, 5).map(subtopic => subtopic.name),
+      };
+    });
+
+  return {
+    date: data.date,
+    dateLabel: formatDateLabel(data.date),
+    weekdayLabel: getWeekdayLabel(data.date),
+    updatedAtLabel: formatUpdateTime(data.update_time),
+    intro: home.intro,
+    stats: {
+      rawItems: home.stats?.rawItems ?? data.items.length,
+      topics: home.stats?.topics ?? readerTopics.length,
+      highlights: home.stats?.highlights ?? home.highlights.length,
+    },
+    highlights: home.highlights.map((highlight, index) => ({
+      ...highlight,
+      rank: String(index + 1).padStart(2, '0'),
+      href: resolveHomeTarget(highlight.target, data.date),
+    })),
+    topics: readerTopics,
+    archive: archiveDates.slice(0, 8).map(date => ({
+      date,
+      label: formatDateLabel(date),
+      href: getDailyNewsHomeHref(date),
+    })),
+  };
+}
+
+export function buildGenericTopicPageView(
+  data: DailyNewsData,
+  topic: TopicConfig,
+) {
+  const topicPage = requireContract(data.topic_pages?.[topic.id], `topic_pages.${topic.id}`);
+  const lineMap = new Map(topicPage.dailyLines.map(line => [line.id, line]));
+
+  return {
+    topic,
+    date: data.date,
+    dateLabel: formatDateLabel(data.date),
+    weekdayLabel: getWeekdayLabel(data.date),
+    updatedAtLabel: formatUpdateTime(data.update_time),
+    stats: {
+      rawItems: topicPage.stats?.rawItems ?? data.items.filter(item => item.topic === topic.id).length,
+      sources: topicPage.stats?.sources ?? new Set(data.items.filter(item => item.topic === topic.id).map(item => item.source)).size,
+      dailyLines: topicPage.stats?.dailyLines ?? topicPage.dailyLines.length,
+    },
+    overview: topicPage.overview.map((entry, index) => ({
+      ...entry,
+      rank: String(index + 1).padStart(2, '0'),
+      href: `#${entry.dailyLineId}`,
+      line: lineMap.get(entry.dailyLineId),
+    })),
+    morningBriefs: topicPage.morningBriefs.map(brief => ({
+      ...brief,
+      sourceName: topic.sources?.find(source => source.id === brief.source)?.name || brief.source,
+    })),
+    dailyLines: topicPage.dailyLines.map(line => ({
+      ...line,
+      refs: line.items.map(entry => resolveViewRef(data.items, entry)),
+    })),
+    otherItems: topicPage.otherItems.map(entry => resolveViewRef(data.items, entry)),
+    sources: topicPage.sources || [],
+  };
+}
+
+export function buildSportsTopicPageView(
+  data: DailyNewsData,
+  topic: TopicConfig,
+) {
+  const sportsPage = requireContract(data.sports_page, 'sports_page');
+  const subtopicMap = new Map(sportsPage.subtopics.map(subtopic => [subtopic.id, subtopic]));
+
+  return {
+    topic,
+    date: data.date,
+    dateLabel: formatDateLabel(data.date),
+    weekdayLabel: getWeekdayLabel(data.date),
+    updatedAtLabel: formatUpdateTime(data.update_time),
+    stats: {
+      rawItems: sportsPage.stats?.rawItems ?? data.items.filter(item => item.topic === 'sports').length,
+      sources: sportsPage.stats?.sources ?? new Set(data.items.filter(item => item.topic === 'sports').map(item => item.source)).size,
+      subtopics: sportsPage.stats?.subtopics ?? sportsPage.subtopics.length,
+    },
+    overview: sportsPage.overview.map((entry, index) => ({
+      ...entry,
+      rank: String(index + 1).padStart(2, '0'),
+      href: `#${entry.subtopicId}`,
+      subtopic: subtopicMap.get(entry.subtopicId),
+    })),
+    subtopics: sportsPage.subtopics.map(subtopic => ({
+      ...subtopic,
+      matchStatus: subtopic.matchStatus || [],
+      refs: subtopic.items.map(entry => resolveViewRef(data.items, entry)),
+    })),
+    otherItems: sportsPage.otherItems.map(entry => resolveViewRef(data.items, entry)),
+    sources: sportsPage.sources || [],
+  };
 }

@@ -1,26 +1,10 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
-import Calendar from '../../components/Calendar.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
 import {
-  buildSourceMeta,
-  formatDateLabel,
-  getClusterHeatFlames,
-  getDisplayQualityReasons,
-  getLeadClusters,
-  getSourceName,
-  getSubtopicName,
-  getSubtopicIcon,
-  getTopicReport,
-  getTopicClusters,
-  getTopicIcon,
-  getTopItems,
-  getWeekdayLabel,
-  normalizeDailyBrief,
-  normalizeStoryClusters,
-  resolveClusterRefs,
+  buildDailyNewsHomeView,
   type DailyNewsData,
   type TopicConfig,
 } from '../../lib/dailyNews';
@@ -35,267 +19,169 @@ dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
 
 const url = new URL(Astro.request.url);
 const selectedDate = url.searchParams.get('date');
-const availableDates = dateEntries.map(e => e.data.date);
+const availableDates = dateEntries.map(entry => entry.data.date);
 const currentDate = selectedDate && availableDates.includes(selectedDate)
   ? selectedDate
   : (availableDates[0] || '');
-const currentEntry = dateEntries.find(e => e.data.date === currentDate);
+const currentIndex = availableDates.indexOf(currentDate);
+const previousDate = availableDates[currentIndex + 1];
+const nextDate = currentIndex > 0 ? availableDates[currentIndex - 1] : undefined;
+const currentEntry = dateEntries.find(entry => entry.data.date === currentDate);
 const currentData = currentEntry?.data as DailyNewsData | undefined;
-const currentItems = currentData?.items || [];
-const activeTopics = topics.filter(topic => topic.active !== false);
-const archivedTopics = topics.filter(topic => topic.type === 'shortterm' && topic.active === false);
-const sourceMeta = buildSourceMeta(topics);
-const dailyBrief = normalizeDailyBrief(currentData, activeTopics);
-const storyClusters = normalizeStoryClusters(currentData, activeTopics);
-const shortTermTopicIds = new Set(activeTopics.filter(topic => topic.type === 'shortterm').map(topic => topic.id));
-const leadClusters = getLeadClusters(storyClusters.filter(cluster => !shortTermTopicIds.has(cluster.topic)), 4);
-const currentWeekday = getWeekdayLabel(currentDate);
 
-function topicItemCount(topicId: string) {
-  return currentItems.filter(item => item.topic === topicId).length;
+if (!currentData) {
+  throw new Error('Missing daily news data');
 }
 
-function topicSourceCount(topicId: string) {
-  return new Set(currentItems.filter(item => item.topic === topicId).map(item => item.source)).size;
-}
+const view = buildDailyNewsHomeView(currentData, topics, availableDates);
+const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updatedAtLabel}` : view.weekdayLabel;
 ---
 
-<BaseLayout title="每日资讯 - AK22AK" description="AK22AK 关注的每日资讯聚合" variant="news">
-  <div class="daily-news-layout daily-news-layout--brief daily-news-layout--home">
-    <aside class="sidebar">
-      <div class="sidebar-inner">
-        <h3 class="sidebar-title">板块</h3>
-        <nav class="sidebar-nav" aria-label="板块导航">
-          <a href="#brief" class="sidebar-link active">
-            <span class="sidebar-icon">◇</span>
-            <span class="sidebar-name">今日简报</span>
-          </a>
-          {activeTopics.map(topic => (
-            <a href={`#${topic.id}`} class="sidebar-link">
-              <span class="sidebar-icon">{getTopicIcon(topic.id)}</span>
-              <span class="sidebar-name">{topic.name}</span>
-              <span class="sidebar-count">{topicItemCount(topic.id)}</span>
-            </a>
-          ))}
-        </nav>
-        <Calendar dates={availableDates} currentDate={currentDate} />
-        <div class="sidebar-footer">
-          <a href={`/daily-news/sources/?date=${currentDate}`} class="sidebar-link muted">
-            来源审查
-          </a>
+<BaseLayout title={`${view.dateLabel} 日报 - AK22AK`} description="AK22AK 每日资讯入口" variant="news">
+  <div class="daily-redesign daily-redesign--home">
+    <aside class="daily-side">
+      <section class="daily-date-block">
+        <p class="daily-side-label">Daily</p>
+        <div class="daily-date-line">
+          {previousDate ? <a href={`/daily-news/?date=${previousDate}`} aria-label="前一天">‹</a> : <span></span>}
+          <strong>{view.dateLabel}</strong>
+          {nextDate ? <a href={`/daily-news/?date=${nextDate}`} aria-label="后一天">›</a> : <span></span>}
         </div>
-      </div>
+        <p>{updateText} 更新</p>
+      </section>
+
+      <section>
+        <p class="daily-side-label">On This Page</p>
+        <nav class="daily-side-nav" aria-label="日报导航">
+          <a class="active" href="#highlights" data-daily-section-link><span>热点</span><small>{view.highlights.length}</small></a>
+          <a href="#topics" data-daily-section-link><span>主题</span><small>{view.topics.length}</small></a>
+          <a href="#archive" data-daily-section-link><span>归档</span><small>→</small></a>
+        </nav>
+      </section>
     </aside>
 
-    <main class="daily-main">
-      <header id="brief" class="news-brief-hero">
-        <div class="brief-kicker">
-          <span>{formatDateLabel(currentDate)}</span>
-          {currentWeekday && <span>{currentWeekday}</span>}
-          {currentData?.update_time && <span>更新 {new Date(currentData.update_time).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</span>}
+    <main class="daily-content">
+      <div class="daily-mobile-date">
+        <span>‹ {view.dateLabel} ›</span>
+        <span>{view.weekdayLabel}{view.updatedAtLabel ? ` · ${view.updatedAtLabel}` : ''}</span>
+      </div>
+      <nav class="daily-mobile-picker" aria-label="日报快捷导航">
+        <a class="active" href="#highlights" data-daily-section-link>热点</a>
+        <a href="#topics" data-daily-section-link>主题</a>
+        <a href="#archive" data-daily-section-link>归档</a>
+      </nav>
+
+      <header class="daily-hero">
+        <div class="daily-meta">
+          <span>{view.stats.rawItems} 条原文</span>
+          <span>{view.stats.topics} 个主题</span>
+          <span>{view.stats.highlights} 条热点</span>
         </div>
-        <h1>{dailyBrief.title}</h1>
-        <p>{dailyBrief.summary || '当前日期暂无可展示的简报内容。'}</p>
-        {dailyBrief.key_points.length > 0 && (
-          <ol class="brief-key-points">
-            {dailyBrief.key_points.map(point => <li>{point}</li>)}
-          </ol>
-        )}
-        {leadClusters.length > 0 && (
-          <div class="brief-hot-block">
-            <h2>今日热门</h2>
-            <div class="brief-hot-list">
-            {leadClusters.map(cluster => {
-              const topic = activeTopics.find(t => t.id === cluster.topic);
-              const qualityReasons = getDisplayQualityReasons(cluster);
-              const refItems = resolveClusterRefs(currentItems, cluster, 3);
-              return (
-                <article class={`brief-hot-item story-cluster-card--${cluster.importance}`}>
-                  <div class="cluster-meta">
-                    <span>{topic?.name || cluster.topic}</span>
-                    {cluster.subtopic && <span>{getSubtopicIcon(cluster.subtopic)} {getSubtopicName(topic, cluster.subtopic)}</span>}
-                    <span class="heat-chip" title="今日热度">{getClusterHeatFlames(cluster)}</span>
-                  </div>
-                  <h3>
-                    <a href={`/daily-news/topic/${cluster.topic}/?date=${currentDate}#cluster-${cluster.id}`}>
-                      {cluster.title}
-                    </a>
-                  </h3>
-                  <p>{cluster.summary}</p>
-                  {qualityReasons.length > 0 && (
-                    <div class="quality-chip-row">
-                      {qualityReasons.map(reason => <span>{reason}</span>)}
-                    </div>
-                  )}
-                  {refItems.length > 0 && (
-                    <details class="cluster-ref-list cluster-ref-list--compact">
-                      <summary>查看 {refItems.length} 条引用</summary>
-                      {refItems.map(item => (
-                        <a href={item.url} target="_blank" rel="noopener noreferrer">
-                          <span>{getSourceName(item.source, sourceMeta)}</span>
-                          <strong>{item.title}</strong>
-                        </a>
-                      ))}
-                    </details>
-                  )}
-                </article>
-              );
-            })}
-            </div>
-          </div>
-        )}
+        <h1>{view.dateLabel} 日报</h1>
+        <p>{view.intro}</p>
       </header>
 
-      {activeTopics.map(topic => {
-        const report = getTopicReport(currentData, topic.id);
-        const topicSummary = currentData?.topic_summaries?.find(summary => summary.topic === topic.id);
-        const clusters = getTopicClusters(storyClusters, topic.id).slice(0, 3);
-        const fallbackItems = getTopItems(currentItems.filter(item => item.topic === topic.id), 3);
-        const count = topicItemCount(topic.id);
-        return (
-          <section id={topic.id} class="topic-section topic-overview-section">
-            <div class="topic-section-header">
-              <h2>
-                <span class="topic-section-icon">{getTopicIcon(topic.id)}</span>
-                {topic.name}
-              </h2>
-              <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`} class="topic-more">
-                深入阅读 →
-              </a>
-            </div>
-            <div class="topic-overview-meta">
-              <span>{count} 条原始资讯</span>
-              <span>{topicSourceCount(topic.id)} 个来源</span>
-              {topic.subtopics?.length ? <span>{topic.subtopics.length} 个栏目</span> : <span>临时专题</span>}
-            </div>
-            {topic.type === 'shortterm' ? (
-              <article class="topic-report-preview">
-                <div class="cluster-meta">
-                  <span>专题晨报</span>
-                  <span>{report ? '结构化摘要' : '旧数据摘要'}</span>
+      <section id="highlights" class="daily-section daily-anchor">
+        <div class="daily-section-head">
+          <h2>今日热点</h2>
+          <span>按阅读优先级排列</span>
+        </div>
+        <ol class="daily-highlight-list">
+          {view.highlights.map(highlight => (
+            <li>
+              <a href={highlight.href}>
+                <span class="daily-rank">{highlight.rank}</span>
+                <div>
+                  <strong>{highlight.title}</strong>
+                  <p>{highlight.summary}</p>
+                  <em>{highlight.label}</em>
                 </div>
-                <h3>
-                  <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}`}>
-                    {report?.title || topicSummary?.highlights?.[0] || topic.name}
-                  </a>
-                </h3>
-                <p>{report?.summary || topicSummary?.summary || topic.description}</p>
-                {report?.sections?.length ? (
-                  <div class="report-preview-grid">
-                    {report.sections.slice(0, 4).map(section => <span>{section.title}</span>)}
-                  </div>
-                ) : topicSummary?.highlights?.length ? (
-                  <div class="report-preview-grid">
-                    {topicSummary.highlights.slice(0, 3).map(point => <span>{point}</span>)}
-                  </div>
-                ) : null}
-              </article>
-            ) : clusters.length > 0 ? (
-              <div class="story-cluster-list story-cluster-list--compact">
-                {clusters.map(cluster => {
-                  const refItems = resolveClusterRefs(currentItems, cluster, 3);
-                  return (
-                    <article class="story-cluster-row">
-                      <div class="cluster-meta">
-                        {cluster.subtopic && <span>{getSubtopicIcon(cluster.subtopic)} {getSubtopicName(topic, cluster.subtopic)}</span>}
-                        <span>{cluster.importance === 'lead' ? '主线' : cluster.importance === 'major' ? '重点' : '补充'}</span>
-                        <span class="heat-chip" title="今日热度">{getClusterHeatFlames(cluster)}</span>
-                      </div>
-                      <h3>
-                        <a href={`/daily-news/topic/${topic.id}/?date=${currentDate}#cluster-${cluster.id}`}>
-                          {cluster.title}
-                        </a>
-                      </h3>
-                      <p>{cluster.summary}</p>
-                      {refItems.length > 0 && (
-                        <details class="cluster-ref-list cluster-ref-list--compact">
-                          <summary>查看 {refItems.length} 条引用</summary>
-                          {refItems.map(item => (
-                            <a href={item.url} target="_blank" rel="noopener noreferrer">
-                              <span>{getSourceName(item.source, sourceMeta)}</span>
-                              <strong>{item.title}</strong>
-                            </a>
-                          ))}
-                        </details>
-                      )}
-                    </article>
-                  );
-                })}
-              </div>
-            ) : fallbackItems.length > 0 ? (
-              <div class="topic-list">
-                {fallbackItems.map(item => (
-                  <article class="topic-item">
-                    <div class="item-body">
-                      <h3 class="item-title">
-                        <a href={item.url} target="_blank" rel="noopener noreferrer">{item.title}</a>
-                        <span class="item-source">{sourceMeta.get(item.source)?.name || item.source}</span>
-                      </h3>
-                      <p class="item-summary">{item.ai_summary || item.summary}</p>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            ) : (
-              <div class="topic-empty">当日暂无 {topic.name} 资讯</div>
-            )}
-          </section>
-        );
-      })}
-
-      {archivedTopics.length > 0 && (
-        <section class="topic-section">
-          <h2>已归档板块</h2>
-          <div class="archived-grid">
-            {archivedTopics.map(topic => (
-              <a href={`/daily-news/topic/${topic.id}/`} class="card archived-card">
-                <span class="archived-name">{topic.name}</span>
-                <span class="archived-tag">已结束</span>
               </a>
-            ))}
-          </div>
-        </section>
-      )}
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section id="topics" class="daily-section daily-anchor">
+        <div class="daily-section-head">
+          <h2>主题</h2>
+          <span>进入板块查看展开信息和来源</span>
+        </div>
+        <div class="daily-topic-list">
+          {view.topics.map(topic => (
+            <a class="daily-topic-row" href={topic.href}>
+              <strong>{topic.name}</strong>
+              <div>
+                <p>{topic.rawItems} 条原文 · {topic.sources} 个来源</p>
+                <span>{topic.tags.join(' / ')}</span>
+              </div>
+              <em>进入</em>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <section id="archive" class="daily-section daily-anchor">
+        <div class="daily-section-head">
+          <h2>归档</h2>
+          <span>按日期回看</span>
+        </div>
+        <div class="daily-archive-list">
+          {view.archive.map(entry => (
+            <a href={entry.href} class={entry.date === currentDate ? 'active' : ''}>{entry.label}</a>
+          ))}
+          <a href="/daily-news/archive/">更多日期</a>
+        </div>
+      </section>
     </main>
   </div>
 </BaseLayout>
 
 <script>
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const sidebarLinks = document.querySelectorAll('.sidebar-link[href^="#"]');
-  const sections = document.querySelectorAll('#brief, .topic-section[id]');
+  const links = Array.from(document.querySelectorAll('[data-daily-section-link]'));
+  const ids = links
+    .map(link => link.getAttribute('href'))
+    .filter((href) => href?.startsWith('#'))
+    .map((href) => href.slice(1));
+  const sections = Array.from(new Set(ids))
+    .map(id => document.getElementById(id))
+    .filter(Boolean);
+  let ticking = false;
+  let activeId = '';
 
-  sidebarLinks.forEach(link => {
-    link.addEventListener('click', (event) => {
-      const href = link.getAttribute('href');
-      if (!href) return;
-      const target = document.querySelector(href);
-      if (!target) return;
-      event.preventDefault();
-      target.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+  function setActive(id, center = false) {
+    if (activeId === id && !center) return;
+    activeId = id;
+    links.forEach(link => {
+      const isActive = link.getAttribute('href') === `#${id}`;
+      link.classList.toggle('active', isActive);
+      if (isActive && center && link.closest('.daily-mobile-picker')) {
+        link.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'auto' });
+      }
+    });
+  }
+
+  function updateActive() {
+    ticking = false;
+    let nextId = sections[0]?.id || '';
+    const offset = window.innerWidth <= 820 ? 220 : 142;
+    sections.forEach(section => {
+      if (section.getBoundingClientRect().top <= offset) nextId = section.id;
+    });
+    if (nextId) setActive(nextId, false);
+  }
+
+  document.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(updateActive);
+  }, { passive: true });
+  window.addEventListener('resize', updateActive);
+  links.forEach(link => {
+    link.addEventListener('click', () => {
+      const href = link.getAttribute('href') || '';
+      if (href.startsWith('#')) setActive(href.slice(1), true);
     });
   });
-
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting) return;
-      sidebarLinks.forEach(link => link.classList.toggle('active', link.getAttribute('href') === `#${entry.target.id}`));
-    });
-  }, { rootMargin: '-20% 0px -65% 0px' });
-
-  sections.forEach(section => observer.observe(section));
+  updateActive();
 </script>
-
-<style>
-  #brief,
-  .daily-news-layout--home .topic-section[id] {
-    scroll-margin-top: 96px;
-  }
-
-  @media (max-width: 768px) {
-    #brief,
-    .daily-news-layout--home .topic-section[id] {
-      scroll-margin-top: 72px;
-    }
-  }
-</style>
