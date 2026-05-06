@@ -78,13 +78,11 @@ const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updated
           <span>{view.stats.highlights} 条热点</span>
         </div>
         <h1>{view.dateLabel} 日报</h1>
-        <p>{view.intro}</p>
       </header>
 
       <section id="highlights" class="daily-section daily-anchor">
         <div class="daily-section-head">
           <h2>今日热点</h2>
-          <span>按阅读优先级排列</span>
         </div>
         <ol class="daily-highlight-list">
           {view.highlights.map(highlight => (
@@ -105,7 +103,6 @@ const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updated
       <section id="topics" class="daily-section daily-anchor">
         <div class="daily-section-head">
           <h2>主题</h2>
-          <span>进入板块查看展开信息和来源</span>
         </div>
         <div class="daily-topic-list">
           {view.topics.map(topic => (
@@ -115,7 +112,6 @@ const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updated
                 <p>{topic.rawItems} 条原文 · {topic.sources} 个来源</p>
                 <span>{topic.tags.join(' / ')}</span>
               </div>
-              <em>进入</em>
             </a>
           ))}
         </div>
@@ -124,7 +120,6 @@ const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updated
       <section id="archive" class="daily-section daily-anchor">
         <div class="daily-section-head">
           <h2>归档</h2>
-          <span>按日期回看</span>
         </div>
         <div class="daily-archive-list">
           {view.archive.map(entry => (

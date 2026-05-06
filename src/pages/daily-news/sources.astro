@@ -81,13 +81,11 @@ const updateText = updatedAtLabel ? `${weekdayLabel} · ${updatedAtLabel}` : wee
           <span>{dailySourceGroups.length} 个来源</span>
         </div>
         <h1>来源</h1>
-        <p>这里保留当天抓取到的全部原文入口。正式日报页面只展示阅读后的组织结果，来源页用于回查和审计。</p>
       </header>
 
       <section id="sources" class="daily-section daily-anchor">
         <div class="daily-section-head">
           <h2>当日来源</h2>
-          <span>按来源分组</span>
         </div>
         <div class="daily-source-list">
           {dailySourceGroups.map(group => (
@@ -103,7 +101,6 @@ const updateText = updatedAtLabel ? `${weekdayLabel} · ${updatedAtLabel}` : wee
       <section id="archive" class="daily-section daily-anchor">
         <div class="daily-section-head">
           <h2>归档</h2>
-          <span>切换日期</span>
         </div>
         <div class="daily-archive-list">
           {availableDates.slice(0, 8).map(date => (

@@ -141,11 +141,6 @@ const matchStatusLabels: Record<string, string> = {
           <span>{isSports ? `${sportsView!.stats.subtopics} 个子主题` : `${genericView!.stats.dailyLines} 条主线`}</span>
         </div>
         <h1>{topic.name}</h1>
-        <p>
-          {isSports
-            ? '体育按当天活跃项目组织：每个子主题内部先放昨日赛果和今日赛程，再放重点资讯。'
-            : '今天不按固定子板块拆分，而是把内容整理成阅读主线。标签只用于扫描，不进入页面主导航。'}
-        </p>
       </header>
 
       {isSports ? (
@@ -153,7 +148,6 @@ const matchStatusLabels: Record<string, string> = {
           <section id="overview" class="daily-section daily-anchor">
             <div class="daily-section-head">
               <h2>今日总览</h2>
-              <span>点击进入对应子主题</span>
             </div>
             <ol class="daily-overview-list">
               {sportsView!.overview.map(entry => (
@@ -161,7 +155,6 @@ const matchStatusLabels: Record<string, string> = {
                   <a href={entry.href}>
                     <span class="daily-rank">{entry.rank}</span>
                     <strong>{entry.text}</strong>
-                    <em>进入</em>
                   </a>
                 </li>
               ))}
@@ -181,7 +174,6 @@ const matchStatusLabels: Record<string, string> = {
                 <div class="daily-match-list">
                   <div class="daily-match-heading">
                     <span>赛果 / 赛程</span>
-                    <em>只放比赛时间、对阵和比分</em>
                   </div>
                   {subtopic.matchStatus.map(status => (
                     <a href={status.url || '#'} class="daily-match-row">
@@ -212,7 +204,6 @@ const matchStatusLabels: Record<string, string> = {
           <section id="overview" class="daily-section daily-anchor">
             <div class="daily-section-head">
               <h2>今日总览</h2>
-              <span>只保留主题内判断</span>
             </div>
             <ol class="daily-overview-list">
               {genericView!.overview.map(entry => (
@@ -220,7 +211,6 @@ const matchStatusLabels: Record<string, string> = {
                   <a href={entry.href}>
                     <span class="daily-rank">{entry.rank}</span>
                     <strong>{entry.text}</strong>
-                    <em>进入</em>
                   </a>
                 </li>
               ))}
@@ -230,7 +220,6 @@ const matchStatusLabels: Record<string, string> = {
           <section id="morning" class="daily-section daily-anchor">
             <div class="daily-section-head">
               <h2>早报</h2>
-              <span>来源 + 原文标题</span>
             </div>
             <div class="daily-morning-list">
               {genericView!.morningBriefs.map(brief => (
@@ -244,7 +233,6 @@ const matchStatusLabels: Record<string, string> = {
           <section id="lines" class="daily-section daily-anchor">
             <div class="daily-section-head">
               <h2>今日主线</h2>
-              <span>5-10 条阅读路径</span>
             </div>
             {genericView!.dailyLines.map(line => (
               <article id={line.id} class="daily-story-group daily-anchor">
@@ -272,7 +260,6 @@ const matchStatusLabels: Record<string, string> = {
       <section id="other" class="daily-section daily-anchor">
         <div class="daily-section-head">
           <h2>其他值得看</h2>
-          <span>{isSports ? '项目长尾与低优先级动态' : '不强行归入主线'}</span>
         </div>
         <div class="daily-other-list">
           {(isSports ? sportsView!.otherItems : genericView!.otherItems).map(ref => (
@@ -288,7 +275,6 @@ const matchStatusLabels: Record<string, string> = {
       <section id="sources" class="daily-section daily-anchor">
         <div class="daily-section-head">
           <h2>来源</h2>
-          <span>只列本板块来源</span>
         </div>
         <div class="daily-source-list">
           {(isSports ? sportsView!.sources : genericView!.sources).map(source => (

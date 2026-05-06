@@ -80,13 +80,11 @@ const topicStats = topics.map(topic => {
           <span>{topicStats.length} 个主题</span>
         </div>
         <h1>归档</h1>
-        <p>按主题或日期回看日报。这里保持入口属性，不再复刻旧版摘要列表。</p>
       </header>
 
       <section id="topics" class="daily-section daily-anchor">
         <div class="daily-section-head">
           <h2>主题</h2>
-          <span>当前活跃入口</span>
         </div>
         <div class="daily-topic-list">
           {topicStats.map(topic => (
@@ -96,7 +94,6 @@ const topicStats = topics.map(topic => {
                 <p>{topic.rawItems} 条原文 · {topic.days} 天有更新</p>
                 <span>{topic.description}</span>
               </div>
-              <em>进入</em>
             </a>
           ))}
         </div>
@@ -105,7 +102,6 @@ const topicStats = topics.map(topic => {
       <section id="dates" class="daily-section daily-anchor">
         <div class="daily-section-head">
           <h2>日期</h2>
-          <span>按天回看</span>
         </div>
         {sortedMonths.map(month => {
           const entries = entriesByMonth.get(month) || [];

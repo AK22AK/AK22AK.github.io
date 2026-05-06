@@ -39,8 +39,12 @@ if [ -d "$DATA_REPO/.git" ]; then
             exit 1
         fi
 
-        git -C "$DATA_REPO" fetch origin "$CURRENT_BRANCH"
-        git -C "$DATA_REPO" pull --ff-only origin "$CURRENT_BRANCH"
+        if git -C "$DATA_REPO" ls-remote --exit-code --heads origin "$CURRENT_BRANCH" >/dev/null 2>&1; then
+            git -C "$DATA_REPO" fetch origin "$CURRENT_BRANCH"
+            git -C "$DATA_REPO" pull --ff-only origin "$CURRENT_BRANCH"
+        else
+            echo "⚠️ 远端不存在分支 ${CURRENT_BRANCH}，跳过远端更新，仅同步当前工作树: $DATA_REPO"
+        fi
     fi
 else
     echo "⚠️ 数据目录不是 Git 仓库，仅执行本地文件同步: $DATA_REPO"
