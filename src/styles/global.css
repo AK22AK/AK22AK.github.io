@@ -2201,14 +2201,14 @@ body:has(.daily-redesign) .header {
 
 body:has(.daily-redesign) .header-inner {
   width: min(1160px, calc(100vw - 64px));
-  min-height: 64px;
+  min-height: 60px;
   margin: 0 auto;
   padding: 0;
 }
 
 body:has(.daily-redesign) .logo {
   color: #171514;
-  font-size: 1.34rem;
+  font-size: 1.22rem;
   font-weight: 740;
   letter-spacing: 0;
 }
@@ -2219,7 +2219,7 @@ body:has(.daily-redesign) .nav {
 
 body:has(.daily-redesign) .nav a {
   color: #6f6963;
-  font-size: 1rem;
+  font-size: 0.92rem;
   font-weight: 600;
 }
 
@@ -2238,7 +2238,7 @@ body:has(.daily-redesign) .nav a:hover {
   margin: 0 auto;
   padding: 58px 0 90px;
   color: #282522;
-  font-size: 17px;
+  font-size: 15.5px;
   line-height: 1.72;
 }
 
@@ -2255,10 +2255,10 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-back-link {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
+  min-height: 31px;
   margin-bottom: 48px;
   color: #77706a;
-  font-size: 0.96rem;
+  font-size: 0.88rem;
   font-weight: 560;
 }
 
@@ -2276,7 +2276,7 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-side-label {
   margin: 0 0 12px;
   color: #aaa39c;
-  font-size: 0.78rem;
+  font-size: 0.72rem;
   font-weight: 720;
   line-height: 1;
   letter-spacing: 0.09em;
@@ -2293,7 +2293,7 @@ body:has(.daily-redesign) .nav a:hover {
 
 .daily-date-line strong {
   justify-self: center;
-  font-size: 1.14rem;
+  font-size: 1.04rem;
   line-height: 1.2;
   letter-spacing: 0;
   white-space: nowrap;
@@ -2304,9 +2304,9 @@ body:has(.daily-redesign) .nav a:hover {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 34px;
+  min-height: 31px;
   color: #b4aca3;
-  font-size: 1.7rem;
+  font-size: 1.52rem;
   font-weight: 620;
 }
 
@@ -2318,7 +2318,7 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-date-block p:last-child {
   margin: 8px 0 0;
   color: #aaa39c;
-  font-size: 0.96rem;
+  font-size: 0.88rem;
   font-weight: 520;
   text-align: center;
 }
@@ -2332,8 +2332,8 @@ body:has(.daily-redesign) .nav a:hover {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  min-height: 42px;
-  padding: 0 14px;
+  min-height: 38px;
+  padding: 0 13px;
   border-radius: 8px;
   color: #5a554f;
   font-weight: 500;
@@ -2354,7 +2354,7 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-side-nav small {
   color: inherit;
   opacity: 0.58;
-  font-size: 0.94rem;
+  font-size: 0.86rem;
   font-weight: 560;
 }
 
@@ -2378,14 +2378,14 @@ body:has(.daily-redesign) .nav a:hover {
   gap: 18px;
   margin-bottom: 22px;
   color: #6e6862;
-  font-size: 0.96rem;
+  font-size: 0.88rem;
   font-weight: 500;
 }
 
 .daily-hero h1 {
   margin: 0 0 18px;
   color: #171514;
-  font-size: clamp(2.45rem, 4.6vw, 3.85rem);
+  font-size: clamp(2.2rem, 4.1vw, 3.45rem);
   font-weight: 650;
   line-height: 1.05;
   letter-spacing: 0;
@@ -2396,14 +2396,14 @@ body:has(.daily-redesign) .nav a:hover {
 }
 
 .daily-topic-hero h1 {
-  font-size: clamp(2.35rem, 4.1vw, 3.25rem);
+  font-size: clamp(2.1rem, 3.7vw, 2.95rem);
 }
 
 .daily-hero p {
   max-width: 760px;
   margin: 0;
   color: #5b5650;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 430;
   line-height: 1.85;
 }
@@ -2428,14 +2428,14 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-section-head h2 {
   margin: 0;
   color: #25221f;
-  font-size: 1.28rem;
+  font-size: 1.16rem;
   font-weight: 580;
   line-height: 1.25;
 }
 
 .daily-section-head span {
   color: #aaa39c;
-  font-size: 0.94rem;
+  font-size: 0.86rem;
   font-weight: 500;
 }
 
@@ -2495,7 +2495,7 @@ body:has(.daily-redesign) .nav a:hover {
 
 .daily-rank {
   color: #aaa39c;
-  font-size: 0.96rem;
+  font-size: 0.88rem;
   font-weight: 500;
   line-height: 1.4;
 }
@@ -2508,7 +2508,7 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-topic-row strong,
 .daily-match-row strong {
   color: #292522;
-  font-size: 1.08rem;
+  font-size: 0.98rem;
   font-weight: 500;
   line-height: 1.45;
 }
@@ -2524,7 +2524,7 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-group-head p {
   margin: 8px 0 0;
   color: #5f5a54;
-  font-size: 0.98rem;
+  font-size: 0.9rem;
   font-weight: 400;
   line-height: 1.72;
 }
@@ -2538,7 +2538,7 @@ body:has(.daily-redesign) .nav a:hover {
 .daily-match-row em {
   color: #aaa39c;
   font-style: normal;
-  font-size: 0.94rem;
+  font-size: 0.86rem;
   font-weight: 500;
   white-space: nowrap;
 }
@@ -2566,7 +2566,7 @@ body:has(.daily-redesign) .nav a:hover {
 
 .daily-topic-row span {
   color: #8f8982;
-  font-size: 0.96rem;
+  font-size: 0.88rem;
   font-weight: 430;
 }
 
@@ -2608,14 +2608,14 @@ body:has(.daily-redesign) .nav a:hover {
 
 .daily-group-head > span {
   color: #aaa39c;
-  font-size: 0.94rem;
+  font-size: 0.86rem;
   font-weight: 560;
 }
 
 .daily-group-head h2 {
   margin: 0;
   color: #25221f;
-  font-size: 1.4rem;
+  font-size: 1.26rem;
   font-weight: 580;
   line-height: 1.35;
 }
@@ -2651,7 +2651,7 @@ body:has(.daily-redesign) .nav a:hover {
   border: 1px solid #e5ded3;
   border-radius: 999px;
   color: #8d857d;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
@@ -2733,7 +2733,7 @@ body:has(.daily-redesign) .nav a:hover {
   border-radius: 999px;
   background: #fbfaf7;
   color: #8d857d;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 500;
   line-height: 1;
   cursor: default;
@@ -2776,13 +2776,13 @@ body:has(.daily-redesign) .nav a:hover {
 
 .daily-ref-link span {
   color: #aaa39c;
-  font-size: 0.88rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
 .daily-ref-link strong {
   color: #292522;
-  font-size: 0.98rem;
+  font-size: 0.9rem;
   font-weight: 500;
   line-height: 1.5;
 }
@@ -2804,14 +2804,14 @@ body:has(.daily-redesign) .nav a:hover {
 
 .daily-match-heading span {
   color: #8f8982;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 620;
 }
 
 .daily-match-heading em {
   color: #aaa39c;
   font-style: normal;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
@@ -2827,7 +2827,7 @@ body:has(.daily-redesign) .nav a:hover {
 
 .daily-match-row span {
   color: #aaa39c;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 600;
 }
 
@@ -2835,13 +2835,13 @@ body:has(.daily-redesign) .nav a:hover {
   display: flex;
   gap: 10px;
   align-items: baseline;
-  font-size: 1rem;
+  font-size: 0.92rem;
 }
 
 .daily-match-row small {
   flex: 0 0 auto;
   color: #8f8982;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 560;
 }
 
@@ -2857,7 +2857,7 @@ body:has(.daily-redesign) .nav a:hover {
 
 .daily-other-list span {
   color: #aaa39c;
-  font-size: 0.9rem;
+  font-size: 0.82rem;
   font-weight: 560;
 }
 
@@ -2872,13 +2872,13 @@ body:has(.daily-redesign) .nav a:hover {
 
 .daily-source-row strong {
   color: #292522;
-  font-size: 0.96rem;
+  font-size: 0.88rem;
   font-weight: 650;
 }
 
 .daily-source-row span {
   color: #6b655f;
-  font-size: 0.92rem;
+  font-size: 0.84rem;
   font-weight: 430;
 }
 
@@ -2896,7 +2896,8 @@ body:has(.daily-redesign) .nav a:hover {
   border: 1px solid #e5ded3;
   border-radius: 999px;
   color: #5d5751;
-  font-weight: 650;
+  font-size: 0.9rem;
+  font-weight: 620;
 }
 
 .daily-archive-list a:hover,
@@ -2928,7 +2929,7 @@ body:has(.daily-redesign) .nav a:hover {
   }
 
   body:has(.daily-redesign) .nav a {
-    font-size: 0.98rem;
+    font-size: 0.9rem;
   }
 
   .daily-redesign,
@@ -2936,7 +2937,7 @@ body:has(.daily-redesign) .nav a:hover {
     display: block;
     width: 100%;
     padding: 0 20px 70px;
-    font-size: 17px;
+    font-size: 15.5px;
   }
 
   .daily-side {
@@ -2950,7 +2951,7 @@ body:has(.daily-redesign) .nav a:hover {
     padding: 22px 0;
     border-bottom: 1px solid #e5ded3;
     color: #5b5650;
-    font-size: 1rem;
+    font-size: 0.92rem;
     font-weight: 650;
   }
 
@@ -2982,13 +2983,13 @@ body:has(.daily-redesign) .nav a:hover {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-height: 40px;
-    padding: 0 16px;
+    min-height: 36px;
+    padding: 0 14px;
     border: 1px solid #e2dacd;
     border-radius: 999px;
     color: #5f5953;
     background: #fbfaf7;
-    font-size: 0.98rem;
+    font-size: 0.9rem;
     font-weight: 600;
     white-space: nowrap;
   }
@@ -3015,18 +3016,18 @@ body:has(.daily-redesign) .nav a:hover {
   .daily-meta {
     gap: 12px;
     margin-bottom: 18px;
-    font-size: 0.92rem;
+    font-size: 0.84rem;
   }
 
   .daily-hero h1,
   .daily-topic-hero h1 {
     margin-bottom: 14px;
-    font-size: 2.35rem;
+    font-size: 2.08rem;
     line-height: 1.08;
   }
 
   .daily-hero p {
-    font-size: 1.08rem;
+    font-size: 0.98rem;
     line-height: 1.8;
   }
 
@@ -3041,11 +3042,11 @@ body:has(.daily-redesign) .nav a:hover {
   }
 
   .daily-section-head h2 {
-    font-size: 1.24rem;
+    font-size: 1.12rem;
   }
 
   .daily-section-head span {
-    font-size: 0.9rem;
+    font-size: 0.82rem;
   }
 
   .daily-highlight-list a,
@@ -3061,7 +3062,7 @@ body:has(.daily-redesign) .nav a:hover {
   }
 
   .daily-rank {
-    font-size: 0.96rem;
+    font-size: 0.86rem;
     line-height: 1.6;
   }
 
@@ -3071,20 +3072,20 @@ body:has(.daily-redesign) .nav a:hover {
   .daily-morning-list strong,
   .daily-other-list strong,
   .daily-topic-row strong {
-    font-size: 1.04rem;
+    font-size: 0.96rem;
     line-height: 1.42;
   }
 
   .daily-story strong,
   .daily-morning-list strong {
-    font-size: 1.06rem;
+    font-size: 0.98rem;
   }
 
   .daily-highlight-list p,
   .daily-story p,
   .daily-topic-row p,
   .daily-group-head p {
-    font-size: 1rem;
+    font-size: 0.92rem;
     line-height: 1.7;
   }
 
@@ -3109,7 +3110,7 @@ body:has(.daily-redesign) .nav a:hover {
   }
 
   .daily-group-head h2 {
-    font-size: 1.28rem;
+    font-size: 1.16rem;
   }
 
   .daily-tag-row,
@@ -3139,7 +3140,7 @@ body:has(.daily-redesign) .nav a:hover {
   }
 
   .daily-match-row strong {
-    font-size: 0.96rem;
+    font-size: 0.88rem;
   }
 
   .daily-archive-list {
@@ -3157,7 +3158,7 @@ body:has(.daily-redesign) .nav a:hover {
 
   body:has(.daily-redesign) .logo {
     flex: 0 0 auto;
-    font-size: 1.42rem;
+    font-size: 1.28rem;
   }
 
   body:has(.daily-redesign) .nav {
@@ -3170,7 +3171,7 @@ body:has(.daily-redesign) .nav a:hover {
 
   body:has(.daily-redesign) .nav a {
     min-height: 42px;
-    font-size: 0.98rem;
+    font-size: 0.9rem;
     white-space: nowrap;
   }
 
@@ -3181,7 +3182,7 @@ body:has(.daily-redesign) .nav a:hover {
   }
 
   .daily-mobile-date {
-    font-size: 0.98rem;
+    font-size: 0.9rem;
   }
 
   .daily-meta {
@@ -3190,11 +3191,11 @@ body:has(.daily-redesign) .nav a:hover {
 
   .daily-hero h1,
   .daily-topic-hero h1 {
-    font-size: 2rem;
+    font-size: 1.8rem;
   }
 
   .daily-hero p {
-    font-size: 1rem;
+    font-size: 0.92rem;
   }
 
   .daily-section-head {
