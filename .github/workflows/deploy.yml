@@ -23,7 +23,8 @@ jobs:
 
       - name: Fetch news data
         run: |
-          git clone --depth 1 https://x-access-token:${{ secrets.NEWS_DATA_PAT }}@github.com/AK22AK/daily-news-data.git /tmp/news-data
+          DATA_BRANCH="${GITHUB_REF_NAME:-master}"
+          git clone --depth 1 --branch "$DATA_BRANCH" https://x-access-token:${{ secrets.NEWS_DATA_PAT }}@github.com/AK22AK/daily-news-data.git /tmp/news-data
           mkdir -p src/content/daily-news
           cp /tmp/news-data/data/daily-news/*.json src/content/daily-news/ 2>/dev/null || true
           cp /tmp/news-data/data/topics.json src/data/daily-news-topics.json
