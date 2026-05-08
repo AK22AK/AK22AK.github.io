@@ -9,7 +9,16 @@ import Ginger from './Ginger.astro';
       <a href="/">首页</a>
       <a href="/blog/">文章</a>
       <a href="/projects/">项目</a>
-      <a href="/daily-news/" class="active">资讯</a>
+      <div class="nav-dropdown">
+        <a href="/daily-news/" class="active nav-dropdown-trigger">资讯</a>
+        <div class="nav-dropdown-menu" aria-label="资讯快速入口">
+          <a href="/daily-news/">日报首页</a>
+          <a href="/daily-news/topic/tech/">科技</a>
+          <a href="/daily-news/topic/sports/">体育</a>
+          <a href="/daily-news/archive/">归档</a>
+          <a href="/daily-news/sources/">来源</a>
+        </div>
+      </div>
       <a href="/about/">关于</a>
     </nav>
   </div>

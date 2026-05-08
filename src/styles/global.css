@@ -86,6 +86,54 @@ button:focus-visible {
   color: #111;
 }
 
+.nav-dropdown {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.nav-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 120;
+  display: grid;
+  min-width: 132px;
+  padding: 8px;
+  border: 1px solid #e5ded3;
+  border-radius: 8px;
+  background: #fffefb;
+  box-shadow: 0 14px 34px rgba(36, 30, 24, 0.11);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.nav-dropdown:hover .nav-dropdown-menu,
+.nav-dropdown:focus-within .nav-dropdown-menu {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+.nav .nav-dropdown-menu a {
+  min-height: 34px;
+  padding: 0 10px;
+  border-radius: 6px;
+  color: #5f5953;
+  font-size: 0.86rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.nav .nav-dropdown-menu a:hover,
+.nav .nav-dropdown-menu a:focus-visible {
+  color: #1f1b18;
+  background: #f4efe7;
+  text-decoration: none;
+}
+
 /* Main Content */
 .main {
   min-height: calc(100vh - 140px);
@@ -2457,6 +2505,15 @@ body:has(.daily-redesign) .nav a:hover {
   min-width: 0;
 }
 
+.daily-overview-summary {
+  max-width: 760px;
+  margin: 0;
+  color: #56504a;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.82;
+}
+
 .daily-highlight-list a,
 .daily-overview-list a {
   display: grid;
@@ -2667,6 +2724,33 @@ body:has(.daily-redesign) .nav a:hover {
   padding: 22px 0;
   border-bottom: 1px solid #ece6dd;
   color: inherit;
+}
+
+.daily-sports-line-list {
+  display: grid;
+  gap: 0;
+  border-top: 1px solid #ece6dd;
+}
+
+.daily-sports-line {
+  padding: 26px 0;
+  border-bottom: 1px solid #ece6dd;
+}
+
+.daily-sports-line h3 {
+  margin: 0;
+  color: #25221f;
+  font-size: 1.08rem;
+  font-weight: 560;
+  line-height: 1.42;
+}
+
+.daily-sports-line p {
+  margin: 10px 0 0;
+  color: #5f5a54;
+  font-size: 0.94rem;
+  font-weight: 400;
+  line-height: 1.76;
 }
 
 .daily-ref-details {
@@ -3056,6 +3140,11 @@ body:has(.daily-redesign) .nav a:hover {
     padding: 18px 0;
   }
 
+  .daily-overview-summary {
+    font-size: 0.94rem;
+    line-height: 1.74;
+  }
+
   .daily-highlight-list em,
   .daily-overview-list em {
     grid-column: 2;
@@ -3084,9 +3173,19 @@ body:has(.daily-redesign) .nav a:hover {
   .daily-highlight-list p,
   .daily-story p,
   .daily-topic-row p,
-  .daily-group-head p {
+  .daily-group-head p,
+  .daily-sports-line p {
     font-size: 0.92rem;
     line-height: 1.7;
+  }
+
+  .daily-sports-line {
+    padding: 22px 0;
+  }
+
+  .daily-sports-line h3 {
+    font-size: 1rem;
+    line-height: 1.44;
   }
 
   .daily-topic-row,

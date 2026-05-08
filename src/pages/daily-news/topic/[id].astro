@@ -7,6 +7,7 @@ import {
   buildGenericTopicPageView,
   buildSportsTopicPageView,
   getDailyNewsHomeHref,
+  getDisplayLabel,
   getSourceName,
   type DailyNewsData,
   type TopicConfig,
@@ -70,6 +71,58 @@ const matchStatusLabels: Record<string, string> = {
   result: '赛果',
   fixture: '赛程',
 };
+
+function formatMatchDateTime(value: string | undefined) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value.replace('T', ' ');
+  return date.toLocaleString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
+}
+
+function getMatchTimeLabel(status: { timeLabel?: string; startTime?: string; resultTime?: string }) {
+  const absoluteTime = status.resultTime || status.startTime;
+  if (absoluteTime) return formatMatchDateTime(absoluteTime);
+  return matchTimeLabels[status.timeLabel || ''] || status.timeLabel || '';
+}
+
+function getMatchTitle(status: {
+  title: string;
+  home?: string;
+  away?: string;
+  playerA?: string;
+  playerB?: string;
+  score?: string;
+}) {
+  if (status.home && status.away) return `${status.home} ${status.score || 'vs'} ${status.away}`;
+  if (status.playerA && status.playerB) return `${status.playerA} ${status.score || 'vs'} ${status.playerB}`;
+  return status.title;
+}
+
+function getOtherItemLabel(ref: { label?: string; item: { subtopic?: string } }) {
+  return getDisplayLabel(topic, ref.label, ref.item.subtopic) || topic.name;
+}
+
+function getTopicSourceId(source: { id?: string; name: string }) {
+  return source.id || source.name;
+}
+
+function getTopicSourceName(source: { id?: string; name: string }) {
+  const sourceId = getTopicSourceId(source);
+  if (sourceId === 'fantasy-football-scout') return 'FPL';
+  return sourceMeta.get(sourceId)?.name || source.name;
+}
+
+function getTopicSourceDescription(source: { id?: string; name: string; description?: string }) {
+  const sourceId = getTopicSourceId(source);
+  if (sourceId === 'fantasy-football-scout') return '英超范特西';
+  return source.description || '当日来源';
+}
 ---
 
 <BaseLayout title={`${topic.name} - ${view.dateLabel} 日报 - AK22AK`} description={`AK22AK ${topic.name} 每日资讯`} variant="news">
@@ -100,7 +153,7 @@ const matchStatusLabels: Record<string, string> = {
             </>
           ) : (
             <>
-              <a class="active" href="#overview" data-daily-section-link><span>总览</span><small>{genericView!.overview.length}</small></a>
+              <a class="active" href="#overview" data-daily-section-link><span>总览</span>{genericView!.overviewSummary ? null : <small>{genericView!.overview.length}</small>}</a>
               <a href="#morning" data-daily-section-link><span>早报</span><small>{genericView!.morningBriefs.length}</small></a>
               <a href="#lines" data-daily-section-link><span>今日主线</span><small>{genericView!.dailyLines.length}</small></a>
               <a href="#other" data-daily-section-link><span>其他</span><small>{genericView!.otherItems.length}</small></a>
@@ -177,25 +230,67 @@ const matchStatusLabels: Record<string, string> = {
                   </div>
                   {subtopic.matchStatus.map(status => (
                     <a href={status.url || '#'} class="daily-match-row">
-                      <span>{matchTimeLabels[status.timeLabel] || status.timeLabel}{status.startTime ? ` · ${status.startTime}` : ''}</span>
+                      <span>{getMatchTimeLabel(status)}</span>
                       <strong>
                         {status.competition ? <small>{status.competition}</small> : null}
-                        {status.home && status.away ? `${status.home} ${status.score || 'vs'} ${status.away}` : status.title}
+                        {getMatchTitle(status)}
                       </strong>
                       <em>{matchStatusLabels[status.status] || status.status}</em>
                     </a>
                   ))}
                 </div>
               )}
-              <div class="daily-story-list">
-                {subtopic.refs.map(ref => (
-                  <a class="daily-story" href={ref.item.url} target="_blank" rel="noopener noreferrer">
-                    <strong>{ref.label || ref.item.title}</strong>
-                    <p>{ref.note || ref.item.ai_summary || ref.item.summary}</p>
-                    <em>{getSourceName(ref.item.source, sourceMeta)}</em>
-                  </a>
-                ))}
-              </div>
+              {subtopic.storylines.length > 0 ? (
+                <div class="daily-sports-line-list">
+                  {subtopic.storylines.map(line => {
+                    const sourceNames = Array.from(new Set(line.refs.map(ref => getSourceName(ref.item.source, sourceMeta))));
+                    const refsId = `sports-refs-${subtopic.id}-${line.id}`;
+                    return (
+                      <article class="daily-sports-line">
+                        <h3>{line.title}</h3>
+                        <p>{line.summary}</p>
+                        <div class="daily-ref-details">
+                          <div class="daily-ref-controls">
+                            <button
+                              class="daily-ref-toggle"
+                              type="button"
+                              aria-label="展开引用"
+                              aria-expanded="false"
+                              aria-controls={refsId}
+                              data-daily-ref-toggle
+                            >
+                              <svg aria-hidden="true" viewBox="0 0 16 16">
+                                <path d="M6 4l4 4-4 4" />
+                              </svg>
+                            </button>
+                            <span class="daily-ref-chip-row" aria-label={`${line.refs.length} 条引用来源`}>
+                              {sourceNames.map(name => <span>{name}</span>)}
+                            </span>
+                          </div>
+                          <div id={refsId} class="daily-ref-list" hidden>
+                            {line.refs.map(ref => (
+                              <a class="daily-ref-link" href={ref.item.url} target="_blank" rel="noopener noreferrer">
+                                <span>{getSourceName(ref.item.source, sourceMeta)}</span>
+                                <strong>{ref.item.title}</strong>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div class="daily-story-list">
+                  {subtopic.refs.map(ref => (
+                    <a class="daily-story" href={ref.item.url} target="_blank" rel="noopener noreferrer">
+                      <strong>{ref.label || ref.item.title}</strong>
+                      <p>{ref.note || ref.item.ai_summary || ref.item.summary}</p>
+                      <em>{getSourceName(ref.item.source, sourceMeta)}</em>
+                    </a>
+                  ))}
+                </div>
+              )}
             </section>
           ))}
         </>
@@ -205,16 +300,20 @@ const matchStatusLabels: Record<string, string> = {
             <div class="daily-section-head">
               <h2>今日总览</h2>
             </div>
-            <ol class="daily-overview-list">
-              {genericView!.overview.map(entry => (
-                <li>
-                  <a href={entry.href}>
-                    <span class="daily-rank">{entry.rank}</span>
-                    <strong>{entry.text}</strong>
-                  </a>
-                </li>
-              ))}
-            </ol>
+            {genericView!.overviewSummary ? (
+              <p class="daily-overview-summary">{genericView!.overviewSummary}</p>
+            ) : (
+              <ol class="daily-overview-list">
+                {genericView!.overview.map(entry => (
+                  <li>
+                    <a href={entry.href}>
+                      <span class="daily-rank">{entry.rank}</span>
+                      <strong>{entry.text}</strong>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            )}
           </section>
 
           <section id="morning" class="daily-section daily-anchor">
@@ -286,7 +385,7 @@ const matchStatusLabels: Record<string, string> = {
         <div class="daily-other-list">
           {(isSports ? sportsView!.otherItems : genericView!.otherItems).map(ref => (
             <a href={ref.item.url} target="_blank" rel="noopener noreferrer">
-              <span>{ref.label || ref.item.subtopic || topic.name}</span>
+              <span>{getOtherItemLabel(ref)}</span>
               <strong>{ref.item.title}</strong>
               <em>{getSourceName(ref.item.source, sourceMeta)}</em>
             </a>
@@ -301,8 +400,8 @@ const matchStatusLabels: Record<string, string> = {
         <div class="daily-source-list">
           {(isSports ? sportsView!.sources : genericView!.sources).map(source => (
             <div class="daily-source-row">
-              <strong>{source.name}</strong>
-              <span>{source.description || '当日来源'}</span>
+              <strong>{getTopicSourceName(source)}</strong>
+              <span>{getTopicSourceDescription(source)}</span>
               <em>{source.count} 条</em>
             </div>
           ))}

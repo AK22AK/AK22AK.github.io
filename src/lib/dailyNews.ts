@@ -139,6 +139,8 @@ export type GenericTopicPageContract = {
     sources?: number;
     dailyLines?: number;
   };
+  overviewSummary?: string;
+  takeaway?: string;
   overview: Array<{
     id: string;
     dailyLineId: string;
@@ -182,19 +184,29 @@ export type SportsTopicPageContract = {
     label: string;
     title: string;
     summary: string;
-    kind: 'sport' | 'league' | 'team' | 'tournament' | 'athletes' | 'mixed';
+    kind: 'sport' | 'league' | 'team' | 'tournament' | 'athletes' | 'fantasy' | 'mixed';
     matchStatus?: Array<{
       id: string;
-      timeLabel: 'yesterday' | 'last_night' | 'this_morning' | 'today' | 'tonight';
+      timeLabel?: 'yesterday' | 'last_night' | 'this_morning' | 'today' | 'tonight' | string;
       title: string;
       competition?: string;
       startTime?: string;
+      resultTime?: string;
       home?: string;
       away?: string;
+      playerA?: string;
+      playerB?: string;
       score?: string;
       note?: string;
       status: 'result' | 'fixture';
       url?: string;
+    }>;
+    storylines?: Array<{
+      id: string;
+      title: string;
+      summary: string;
+      tags?: string[];
+      items: RefEntry[];
     }>;
     items: RefEntry[];
     deeperPageHref?: string;
@@ -252,12 +264,34 @@ const SUBTOPIC_ICONS: Record<string, string> = {
   business: '🏢',
   community: '💬',
   football: '⚽',
+  fpl: '⚽',
   'snooker-world-championship': '🎱',
   basketball: '🏀',
   racing: '🏎️',
   tennis: '🎾',
   'asian-athletes': '🏅',
   other: '•',
+};
+
+const SUBTOPIC_LABEL_OVERRIDES: Record<string, string> = {
+  ai: 'AI',
+  'consumer-electronics': '消费电子',
+  mobility: '汽车与出行',
+  chips: '芯片与硬件产业',
+  'developer-tools': '开发者工具',
+  business: '公司与商业',
+  community: '社区讨论',
+  football: '足球',
+  fpl: 'FPL',
+  'snooker-world-championship': '斯诺克世锦赛',
+  basketball: '篮球',
+  racing: '赛车',
+  tennis: '网球',
+  'asian-athletes': '中国与亚洲选手',
+  other: '其他值得看',
+  'general-sports': '综合体育',
+  'consumer electronics': '消费电子',
+  'developer tools': '开发者工具',
 };
 
 const IMPORTANCE_RANK: Record<StoryCluster['importance'], number> = {
@@ -322,7 +356,22 @@ export function getSourceName(
 export function getSubtopicName(topic: TopicConfig | undefined, subtopicId: string | undefined) {
   if (!subtopicId) return '';
   if (subtopicId === UNCATEGORIZED_SUBTOPIC.id) return UNCATEGORIZED_SUBTOPIC.name;
-  return topic?.subtopics?.find(subtopic => subtopic.id === subtopicId)?.name || subtopicId;
+  return topic?.subtopics?.find(subtopic => subtopic.id === subtopicId)?.name
+    || SUBTOPIC_LABEL_OVERRIDES[subtopicId]
+    || subtopicId;
+}
+
+export function getDisplayLabel(
+  topic: TopicConfig | undefined,
+  label: string | undefined,
+  subtopicId?: string,
+) {
+  const normalized = (label || '').trim();
+  if (subtopicId) return getSubtopicName(topic, subtopicId);
+  if (!normalized) return '';
+  return SUBTOPIC_LABEL_OVERRIDES[normalized]
+    || SUBTOPIC_LABEL_OVERRIDES[normalized.toLowerCase()]
+    || normalized;
 }
 
 export function getItemSummary(item: DailyNewsItem): string {
@@ -914,6 +963,7 @@ export function buildGenericTopicPageView(
       sources: topicPage.stats?.sources ?? new Set(data.items.filter(item => item.topic === topic.id).map(item => item.source)).size,
       dailyLines: topicPage.stats?.dailyLines ?? topicPage.dailyLines.length,
     },
+    overviewSummary: topicPage.overviewSummary || topicPage.takeaway || '',
     overview: topicPage.overview.map((entry, index) => ({
       ...entry,
       rank: String(index + 1).padStart(2, '0'),
@@ -960,6 +1010,10 @@ export function buildSportsTopicPageView(
     subtopics: sportsPage.subtopics.map(subtopic => ({
       ...subtopic,
       matchStatus: subtopic.matchStatus || [],
+      storylines: (subtopic.storylines || []).map(line => ({
+        ...line,
+        refs: line.items.map(entry => resolveViewRef(data.items, entry)),
+      })),
       refs: subtopic.items.map(entry => resolveViewRef(data.items, entry)),
     })),
     otherItems: sportsPage.otherItems.map(entry => resolveViewRef(data.items, entry)),
