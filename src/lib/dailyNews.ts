@@ -133,6 +133,25 @@ export type RefEntry = {
   note?: string;
 };
 
+export type SportsMatchEntry = {
+  id: string;
+  timeLabel?: 'yesterday' | 'last_night' | 'this_morning' | 'today' | 'tonight' | string;
+  title: string;
+  competition?: string;
+  startTime?: string;
+  resultTime?: string;
+  home?: string;
+  away?: string;
+  playerA?: string;
+  playerB?: string;
+  score?: string;
+  note?: string;
+  status: 'result' | 'fixture';
+  priority?: number | string;
+  reason?: string;
+  url?: string;
+};
+
 export type GenericTopicPageContract = {
   stats?: {
     rawItems?: number;
@@ -185,22 +204,8 @@ export type SportsTopicPageContract = {
     title: string;
     summary: string;
     kind: 'sport' | 'league' | 'team' | 'tournament' | 'athletes' | 'fantasy' | 'mixed';
-    matchStatus?: Array<{
-      id: string;
-      timeLabel?: 'yesterday' | 'last_night' | 'this_morning' | 'today' | 'tonight' | string;
-      title: string;
-      competition?: string;
-      startTime?: string;
-      resultTime?: string;
-      home?: string;
-      away?: string;
-      playerA?: string;
-      playerB?: string;
-      score?: string;
-      note?: string;
-      status: 'result' | 'fixture';
-      url?: string;
-    }>;
+    matchStatus?: SportsMatchEntry[];
+    fixtures?: SportsMatchEntry[];
     storylines?: Array<{
       id: string;
       title: string;
@@ -870,6 +875,41 @@ function resolveViewRef(items: DailyNewsItem[], entry: RefEntry) {
   };
 }
 
+function resolveSubtopicItemRef(items: DailyNewsItem[], entry: RefEntry) {
+  const viewRef = resolveViewRef(items, entry);
+  const readerTitle = firstNonEmpty([
+    entry.label,
+    entry.note,
+    viewRef.item.ai_summary,
+    viewRef.item.summary,
+    viewRef.item.title,
+  ]);
+  const readerSummary = entry.note && entry.note !== readerTitle
+    ? entry.note
+    : firstNonEmpty([viewRef.item.ai_summary, viewRef.item.summary]);
+
+  return {
+    ...viewRef,
+    readerTitle,
+    readerSummary,
+  };
+}
+
+function resolveOtherItemRef(items: DailyNewsItem[], entry: RefEntry) {
+  const viewRef = resolveViewRef(items, entry);
+  const readerTitle = firstNonEmpty([
+    entry.note,
+    viewRef.item.ai_summary,
+    viewRef.item.summary,
+    viewRef.item.title,
+  ]);
+
+  return {
+    ...viewRef,
+    readerTitle,
+  };
+}
+
 function resolveHomeTarget(target: DailyNewsHomeTarget, date: string) {
   if (target.href) return target.href;
 
@@ -890,6 +930,19 @@ function resolveHomeTarget(target: DailyNewsHomeTarget, date: string) {
   }
 
   throw new Error(`Invalid daily home target: ${JSON.stringify(target)}`);
+}
+
+function getTargetDailyLine(data: DailyNewsData, target: DailyNewsHomeTarget) {
+  if (target.type !== 'dailyLine' || !target.topicSlug || !target.dailyLineId) return undefined;
+  return data.topic_pages?.[target.topicSlug]?.dailyLines.find(line => line.id === target.dailyLineId);
+}
+
+function resolveHomeHighlightSummary(
+  data: DailyNewsData,
+  highlight: DailyNewsHomeContract['highlights'][number],
+) {
+  const targetLine = getTargetDailyLine(data, highlight.target);
+  return targetLine?.summary?.trim() || highlight.summary;
 }
 
 export function formatUpdateTime(updateTime: string | undefined) {
@@ -933,6 +986,7 @@ export function buildDailyNewsHomeView(
     },
     highlights: home.highlights.map((highlight, index) => ({
       ...highlight,
+      summary: resolveHomeHighlightSummary(data, highlight),
       rank: String(index + 1).padStart(2, '0'),
       href: resolveHomeTarget(highlight.target, data.date),
     })),
@@ -978,7 +1032,7 @@ export function buildGenericTopicPageView(
       ...line,
       refs: line.items.map(entry => resolveViewRef(data.items, entry)),
     })),
-    otherItems: topicPage.otherItems.map(entry => resolveViewRef(data.items, entry)),
+    otherItems: topicPage.otherItems.map(entry => resolveOtherItemRef(data.items, entry)),
     sources: topicPage.sources || [],
   };
 }
@@ -1010,13 +1064,15 @@ export function buildSportsTopicPageView(
     subtopics: sportsPage.subtopics.map(subtopic => ({
       ...subtopic,
       matchStatus: subtopic.matchStatus || [],
+      featuredMatchStatus: (subtopic.matchStatus || []).slice(0, 5),
+      fixtures: subtopic.fixtures || [],
       storylines: (subtopic.storylines || []).map(line => ({
         ...line,
         refs: line.items.map(entry => resolveViewRef(data.items, entry)),
       })),
-      refs: subtopic.items.map(entry => resolveViewRef(data.items, entry)),
+      refs: subtopic.items.map(entry => resolveSubtopicItemRef(data.items, entry)),
     })),
-    otherItems: sportsPage.otherItems.map(entry => resolveViewRef(data.items, entry)),
+    otherItems: sportsPage.otherItems.map(entry => resolveOtherItemRef(data.items, entry)),
     sources: sportsPage.sources || [],
   };
 }

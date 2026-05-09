@@ -104,6 +104,10 @@ function getMatchTitle(status: {
   return status.title;
 }
 
+function getMatchNote(status: { reason?: string; note?: string }) {
+  return status.reason || status.note || '';
+}
+
 function getOtherItemLabel(ref: { label?: string; item: { subtopic?: string } }) {
   return getDisplayLabel(topic, ref.label, ref.item.subtopic) || topic.name;
 }
@@ -146,7 +150,7 @@ function getTopicSourceDescription(source: { id?: string; name: string; descript
             <>
               <a class="active" href="#overview" data-daily-section-link><span>总览</span><small>{sportsView!.overview.length}</small></a>
               {sportsView!.subtopics.map(subtopic => (
-                <a href={`#${subtopic.id}`} data-daily-section-link><span>{subtopic.label}</span><small>{subtopic.refs.length}</small></a>
+                <a href={`#${subtopic.id}`} data-daily-section-link><span>{subtopic.label}</span><small>{subtopic.storylines.length || subtopic.refs.length}</small></a>
               ))}
               <a href="#other" data-daily-section-link><span>其他</span><small>{sportsView!.otherItems.length}</small></a>
               <a href="#sources" data-daily-section-link><span>来源</span><small>{sportsView!.sources.length}</small></a>
@@ -223,12 +227,12 @@ function getTopicSourceDescription(source: { id?: string; name: string; descript
                   <p>{subtopic.summary}</p>
                 </div>
               </div>
-              {subtopic.matchStatus.length > 0 && (
+              {subtopic.featuredMatchStatus.length > 0 && (
                 <div class="daily-match-list">
                   <div class="daily-match-heading">
-                    <span>赛果 / 赛程</span>
+                    <span>重点赛果 / 赛程</span>
                   </div>
-                  {subtopic.matchStatus.map(status => (
+                  {subtopic.featuredMatchStatus.map(status => (
                     <a href={status.url || '#'} class="daily-match-row">
                       <span>{getMatchTimeLabel(status)}</span>
                       <strong>
@@ -236,9 +240,31 @@ function getTopicSourceDescription(source: { id?: string; name: string; descript
                         {getMatchTitle(status)}
                       </strong>
                       <em>{matchStatusLabels[status.status] || status.status}</em>
+                      {getMatchNote(status) ? <p>{getMatchNote(status)}</p> : null}
                     </a>
                   ))}
                 </div>
+              )}
+              {subtopic.fixtures.length > subtopic.featuredMatchStatus.length && (
+                <details class="daily-fixture-details">
+                  <summary>
+                    <span>查看全部今日赛程/赛果</span>
+                    <em>{subtopic.fixtures.length} 条</em>
+                  </summary>
+                  <div class="daily-fixture-list">
+                    {subtopic.fixtures.map(status => (
+                      <a href={status.url || '#'} class="daily-match-row daily-match-row--fixture">
+                        <span>{getMatchTimeLabel(status)}</span>
+                        <strong>
+                          {status.competition ? <small>{status.competition}</small> : null}
+                          {getMatchTitle(status)}
+                        </strong>
+                        <em>{matchStatusLabels[status.status] || status.status}</em>
+                        {getMatchNote(status) ? <p>{getMatchNote(status)}</p> : null}
+                      </a>
+                    ))}
+                  </div>
+                </details>
               )}
               {subtopic.storylines.length > 0 ? (
                 <div class="daily-sports-line-list">
@@ -284,9 +310,11 @@ function getTopicSourceDescription(source: { id?: string; name: string; descript
                 <div class="daily-story-list">
                   {subtopic.refs.map(ref => (
                     <a class="daily-story" href={ref.item.url} target="_blank" rel="noopener noreferrer">
-                      <strong>{ref.label || ref.item.title}</strong>
-                      <p>{ref.note || ref.item.ai_summary || ref.item.summary}</p>
-                      <em>{getSourceName(ref.item.source, sourceMeta)}</em>
+                      <strong>{ref.readerTitle}</strong>
+                      {ref.readerSummary ? <p>{ref.readerSummary}</p> : null}
+                      <span class="daily-ref-chip-row daily-story-source-chips">
+                        <span>{getSourceName(ref.item.source, sourceMeta)}</span>
+                      </span>
                     </a>
                   ))}
                 </div>
@@ -386,7 +414,7 @@ function getTopicSourceDescription(source: { id?: string; name: string; descript
           {(isSports ? sportsView!.otherItems : genericView!.otherItems).map(ref => (
             <a href={ref.item.url} target="_blank" rel="noopener noreferrer">
               <span>{getOtherItemLabel(ref)}</span>
-              <strong>{ref.item.title}</strong>
+              <strong>{ref.readerTitle}</strong>
               <em>{getSourceName(ref.item.source, sourceMeta)}</em>
             </a>
           ))}

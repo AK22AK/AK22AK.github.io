@@ -11,6 +11,7 @@
     "dev": "astro dev",
     "prebuild": "npm run sync:data --silent",
     "build": "astro build",
+    "test:daily-news": "node --experimental-strip-types --test tests/dailyNews.test.ts",
     "preview": "astro preview",
     "astro": "astro"
   },
