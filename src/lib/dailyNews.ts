@@ -878,7 +878,6 @@ function resolveViewRef(items: DailyNewsItem[], entry: RefEntry) {
 function resolveSubtopicItemRef(items: DailyNewsItem[], entry: RefEntry) {
   const viewRef = resolveViewRef(items, entry);
   const readerTitle = firstNonEmpty([
-    entry.label,
     entry.note,
     viewRef.item.ai_summary,
     viewRef.item.summary,
@@ -893,6 +892,12 @@ function resolveSubtopicItemRef(items: DailyNewsItem[], entry: RefEntry) {
     readerTitle,
     readerSummary,
   };
+}
+
+export function getSportsSubtopicRenderMode(
+  subtopic: { storylines?: unknown[] },
+) {
+  return subtopic.storylines && subtopic.storylines.length > 0 ? 'storylines' : 'items';
 }
 
 function resolveOtherItemRef(items: DailyNewsItem[], entry: RefEntry) {

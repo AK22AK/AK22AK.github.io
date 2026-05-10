@@ -9,6 +9,7 @@ import {
   getDailyNewsHomeHref,
   getDisplayLabel,
   getSourceName,
+  getSportsSubtopicRenderMode,
   type DailyNewsData,
   type TopicConfig,
 } from '../../../lib/dailyNews';
@@ -60,6 +61,8 @@ const genericView = !isSports ? buildGenericTopicPageView(currentData, topic) : 
 const sportsView = isSports ? buildSportsTopicPageView(currentData, topic) : undefined;
 const view = sportsView || genericView!;
 const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updatedAtLabel}` : view.weekdayLabel;
+const otherItemsSectionId = isSports ? 'other-items' : 'other';
+const otherItemsNavLabel = isSports ? '其他值得看' : '其他';
 const matchTimeLabels: Record<string, string> = {
   yesterday: '昨天',
   last_night: '昨晚',
@@ -112,6 +115,10 @@ function getOtherItemLabel(ref: { label?: string; item: { subtopic?: string } })
   return getDisplayLabel(topic, ref.label, ref.item.subtopic) || topic.name;
 }
 
+function getSportsSubtopicNavLabel(subtopic: { id: string; label: string }) {
+  return subtopic.id === 'other' ? '其他项目' : subtopic.label;
+}
+
 function getTopicSourceId(source: { id?: string; name: string }) {
   return source.id || source.name;
 }
@@ -150,9 +157,9 @@ function getTopicSourceDescription(source: { id?: string; name: string; descript
             <>
               <a class="active" href="#overview" data-daily-section-link><span>总览</span><small>{sportsView!.overview.length}</small></a>
               {sportsView!.subtopics.map(subtopic => (
-                <a href={`#${subtopic.id}`} data-daily-section-link><span>{subtopic.label}</span><small>{subtopic.storylines.length || subtopic.refs.length}</small></a>
+                <a href={`#${subtopic.id}`} data-daily-section-link><span>{getSportsSubtopicNavLabel(subtopic)}</span><small>{subtopic.storylines.length || subtopic.refs.length}</small></a>
               ))}
-              <a href="#other" data-daily-section-link><span>其他</span><small>{sportsView!.otherItems.length}</small></a>
+              <a href={`#${otherItemsSectionId}`} data-daily-section-link><span>{otherItemsNavLabel}</span><small>{sportsView!.otherItems.length}</small></a>
               <a href="#sources" data-daily-section-link><span>来源</span><small>{sportsView!.sources.length}</small></a>
             </>
           ) : (
@@ -177,8 +184,8 @@ function getTopicSourceDescription(source: { id?: string; name: string; descript
         {isSports ? (
           <>
             <a class="active" href="#overview" data-daily-section-link>总览</a>
-            {sportsView!.subtopics.map(subtopic => <a href={`#${subtopic.id}`} data-daily-section-link>{subtopic.label}</a>)}
-            <a href="#other" data-daily-section-link>其他</a>
+            {sportsView!.subtopics.map(subtopic => <a href={`#${subtopic.id}`} data-daily-section-link>{getSportsSubtopicNavLabel(subtopic)}</a>)}
+            <a href={`#${otherItemsSectionId}`} data-daily-section-link>{otherItemsNavLabel}</a>
           </>
         ) : (
           <>
@@ -266,7 +273,7 @@ function getTopicSourceDescription(source: { id?: string; name: string; descript
                   </div>
                 </details>
               )}
-              {subtopic.storylines.length > 0 ? (
+              {getSportsSubtopicRenderMode(subtopic) === 'storylines' ? (
                 <div class="daily-sports-line-list">
                   {subtopic.storylines.map(line => {
                     const sourceNames = Array.from(new Set(line.refs.map(ref => getSourceName(ref.item.source, sourceMeta))));
@@ -406,7 +413,7 @@ function getTopicSourceDescription(source: { id?: string; name: string; descript
         </>
       )}
 
-      <section id="other" class="daily-section daily-anchor">
+      <section id={otherItemsSectionId} class="daily-section daily-anchor">
         <div class="daily-section-head">
           <h2>其他值得看</h2>
         </div>

@@ -1,11 +1,14 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import test from 'node:test';
 import {
   buildDailyNewsHomeView,
   buildSportsTopicPageView,
+  getSportsSubtopicRenderMode,
   type DailyNewsData,
   type TopicConfig,
 } from '../src/lib/dailyNews.ts';
+import { sportsPageSchema } from '../src/lib/dailyNewsContentSchema.ts';
 
 const topics: TopicConfig[] = [
   {
@@ -126,8 +129,8 @@ test('sports view exposes storylines with reader-facing refs before raw fallback
 
   assert.equal(subtopic.storylines[0].title, '欧冠决赛主线');
   assert.equal(Object.hasOwn(subtopic.storylines[0].refs[0], 'readerTitle'), false);
-  assert.equal(subtopic.refs[0].readerTitle, '阿森纳晋级决赛');
-  assert.equal(subtopic.refs[0].readerSummary, '萨卡一击制胜');
+  assert.equal(subtopic.refs[0].readerTitle, '萨卡一击制胜');
+  assert.equal(subtopic.refs[0].readerSummary, '中文 AI 摘要');
 });
 
 test('sports view keeps featured match status separate from full fixtures', () => {
@@ -177,4 +180,104 @@ test('otherItems use the Chinese note as the reader-facing title, not the catego
 
   assert.equal(view.otherItems[0].label, '综合体育');
   assert.equal(view.otherItems[0].readerTitle, '布鲁诺·费尔南德斯谈奖杯、助攻纪录与未来去向');
+});
+
+test('sports content schema preserves storylines and expanded match fields', () => {
+  const parsed = sportsPageSchema.parse({
+    overview: [],
+    subtopics: [
+      {
+        id: 'football',
+        label: '足球',
+        title: '今日足球',
+        summary: '中文聚合主线应该保留。',
+        kind: 'league',
+        matchStatus: [
+          {
+            id: 'match-1',
+            timeLabel: 'today',
+            title: '曼城 vs 布伦特福德',
+            status: 'result',
+            resultTime: '2026-05-10T05:30:00+08:00',
+            reason: '争冠关键战',
+            importance: 'lead',
+            priority: 1,
+          },
+        ],
+        fixtures: [
+          {
+            id: 'fixture-1',
+            timeLabel: 'tonight',
+            title: '阿森纳 vs 利物浦',
+            status: 'fixture',
+            priority: 2,
+          },
+        ],
+        storylines: [
+          {
+            id: 'football-sl-1',
+            title: '英超争冠进入最后阶段',
+            summary: '中文聚合主线替代 raw item 展示。',
+            tags: ['英超'],
+            items: [{ ref: 1, note: '中文引用说明' }],
+          },
+        ],
+        items: [{ ref: 1, label: '足球' }],
+      },
+    ],
+    otherItems: [],
+  });
+
+  const subtopic = parsed.subtopics[0] as any;
+
+  assert.equal(subtopic.storylines.length, 1);
+  assert.equal(subtopic.fixtures.length, 1);
+  assert.equal(subtopic.matchStatus[0].resultTime, '2026-05-10T05:30:00+08:00');
+  assert.equal(subtopic.matchStatus[0].reason, '争冠关键战');
+  assert.equal(subtopic.matchStatus[0].importance, 'lead');
+  assert.equal(subtopic.matchStatus[0].priority, 1);
+});
+
+test('sports subtopic rendering chooses storylines before raw fallback items', () => {
+  const data = baseData();
+  data.sports_page!.subtopics = [
+    {
+      id: 'football',
+      label: '足球',
+      title: '今日足球',
+      summary: '中文聚合主线应该优先展示。',
+      kind: 'league',
+      storylines: [
+        {
+          id: 'football-sl-1',
+          title: '英超第 36 轮赛果',
+          summary: '中文聚合摘要。',
+          items: [{ ref: 1, note: '中文引用' }],
+        },
+      ],
+      items: [
+        {
+          ref: 1,
+          label: '足球',
+          note: 'Raw fallback should not render',
+        },
+      ],
+    },
+  ];
+
+  const view = buildSportsTopicPageView(data, topics[1]);
+
+  assert.equal(getSportsSubtopicRenderMode(view.subtopics[0]), 'storylines');
+  assert.equal(view.subtopics[0].storylines[0].title, '英超第 36 轮赛果');
+});
+
+test('sports topic page keeps subtopic other and otherItems anchors distinct', () => {
+  const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
+
+  assert.match(source, /function getSportsSubtopicNavLabel/);
+  assert.match(source, /subtopic\.id === 'other' \? '其他项目'/);
+  assert.match(source, /const otherItemsSectionId = isSports \? 'other-items' : 'other'/);
+  assert.match(source, /href=\{`#\$\{otherItemsSectionId\}`\}/);
+  assert.match(source, /id=\{otherItemsSectionId\}/);
+  assert.match(source, /isSports \? '其他值得看' : '其他'/);
 });
