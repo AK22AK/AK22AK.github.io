@@ -7,6 +7,21 @@ const navItems = [
   { href: '/projects', label: '项目' },
   { href: '/blog', label: '想法' },
 ];
+
+const mobilePrimaryItems = [
+  { href: '/', label: '首页' },
+  { href: '/blog/', label: '文章' },
+  { href: '/projects/', label: '项目' },
+  { href: '/about/', label: '关于' },
+];
+
+const newsItems = [
+  { href: '/daily-news/', label: '资讯首页' },
+  { href: '/daily-news/topic/tech/', label: '科技' },
+  { href: '/daily-news/topic/sports/', label: '体育' },
+  { href: '/daily-news/archive/', label: '归档' },
+  { href: '/daily-news/sources/', label: '来源' },
+];
 ---
 
 <header class="header">
@@ -27,5 +42,91 @@ const navItems = [
         </div>
       </div>
     </nav>
+    <button
+      class="mobile-nav-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="site-mobile-menu"
+      data-mobile-nav-toggle
+    >
+      <span class="mobile-nav-toggle-icon" aria-hidden="true"></span>
+      <span>菜单</span>
+    </button>
   </div>
+  <nav id="site-mobile-menu" class="mobile-nav-panel" aria-label="移动端主导航" hidden data-mobile-nav-panel>
+    <div class="mobile-nav-links">
+      {mobilePrimaryItems.slice(0, 3).map(item => (
+        <a class="mobile-nav-link" href={item.href}>{item.label}</a>
+      ))}
+      <section class="mobile-nav-section" aria-labelledby="mobile-news-heading">
+        <div id="mobile-news-heading" class="mobile-nav-section-title">资讯</div>
+        <div class="mobile-nav-subgrid">
+          {newsItems.map(item => (
+            <a class="mobile-nav-sublink" href={item.href}>{item.label}</a>
+          ))}
+        </div>
+      </section>
+      <a class="mobile-nav-link" href={mobilePrimaryItems[3].href}>{mobilePrimaryItems[3].label}</a>
+    </div>
+  </nav>
 </header>
+
+<script>
+  const mobileNavBreakpoint = window.matchMedia('(min-width: 769px)');
+
+  document.querySelectorAll('[data-mobile-nav-toggle]').forEach((button) => {
+    const panelId = button.getAttribute('aria-controls');
+    const panel = panelId ? document.getElementById(panelId) : null;
+
+    if (!panel) {
+      return;
+    }
+
+    const closePanel = () => {
+      button.setAttribute('aria-expanded', 'false');
+      panel.hidden = true;
+    };
+
+    const openPanel = () => {
+      button.setAttribute('aria-expanded', 'true');
+      panel.hidden = false;
+    };
+
+    button.addEventListener('click', () => {
+      const isOpen = button.getAttribute('aria-expanded') === 'true';
+      if (isOpen) {
+        closePanel();
+      } else {
+        openPanel();
+      }
+    });
+
+    panel.querySelectorAll('a').forEach((link) => {
+      link.addEventListener('click', closePanel);
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closePanel();
+      }
+    });
+
+    document.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof Node)) {
+        return;
+      }
+
+      const isOpen = button.getAttribute('aria-expanded') === 'true';
+      if (isOpen && !button.contains(target) && !panel.contains(target)) {
+        closePanel();
+      }
+    });
+
+    mobileNavBreakpoint.addEventListener('change', (event) => {
+      if (event.matches) {
+        closePanel();
+      }
+    });
+  });
+</script>

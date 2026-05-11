@@ -164,6 +164,139 @@ button:focus-visible {
   text-decoration: none;
 }
 
+.mobile-nav-toggle,
+.mobile-nav-panel {
+  display: none;
+}
+
+.mobile-nav-toggle {
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border: 1px solid #e5ded3;
+  border-radius: 999px;
+  color: #2a2520;
+  background: #fffefb;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.mobile-nav-toggle:hover,
+.mobile-nav-toggle:focus-visible {
+  color: #111;
+  background: #f7f2ea;
+}
+
+.mobile-nav-toggle-icon {
+  position: relative;
+  width: 1rem;
+  height: 0.75rem;
+}
+
+.mobile-nav-toggle-icon::before,
+.mobile-nav-toggle-icon::after {
+  position: absolute;
+  left: 0;
+  width: 1rem;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  content: '';
+  transition: transform 140ms ease, top 140ms ease;
+}
+
+.mobile-nav-toggle-icon::before {
+  top: 2px;
+}
+
+.mobile-nav-toggle-icon::after {
+  top: 9px;
+}
+
+.mobile-nav-toggle[aria-expanded="true"] .mobile-nav-toggle-icon::before {
+  top: 6px;
+  transform: rotate(45deg);
+}
+
+.mobile-nav-toggle[aria-expanded="true"] .mobile-nav-toggle-icon::after {
+  top: 6px;
+  transform: rotate(-45deg);
+}
+
+.mobile-nav-panel {
+  width: 100%;
+  border-top: 1px solid #eee6dc;
+  background: #fffefb;
+}
+
+.mobile-nav-panel[hidden] {
+  display: none;
+}
+
+.mobile-nav-links {
+  width: min(100%, 980px);
+  margin: 0 auto;
+  padding: 0.75rem 1rem 1rem;
+}
+
+.mobile-nav-link,
+.mobile-nav-sublink {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: #332e29;
+  font-weight: 650;
+}
+
+.mobile-nav-link {
+  border-bottom: 1px solid #f0e8dd;
+  font-size: 1rem;
+}
+
+.mobile-nav-link:hover,
+.mobile-nav-link:focus-visible,
+.mobile-nav-sublink:hover,
+.mobile-nav-sublink:focus-visible {
+  color: #111;
+  text-decoration: none;
+}
+
+.mobile-nav-section {
+  padding: 0.8rem 0 0.9rem;
+  border-bottom: 1px solid #f0e8dd;
+}
+
+.mobile-nav-section-title {
+  margin-bottom: 0.45rem;
+  color: #171514;
+  font-size: 0.9rem;
+  font-weight: 760;
+}
+
+.mobile-nav-section.active .mobile-nav-section-title {
+  color: #111;
+}
+
+.mobile-nav-subgrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem 0.75rem;
+}
+
+.mobile-nav-sublink {
+  min-width: 0;
+  padding: 0 0.75rem;
+  border-radius: 8px;
+  background: #f8f4ee;
+  color: #5f5953;
+  font-size: 0.92rem;
+}
+
 /* Main Content */
 .main {
   min-height: calc(100vh - 140px);
@@ -1913,7 +2046,6 @@ p {
   }
 
   .header {
-    position: static;
     padding: 0.5rem 0;
   }
 
@@ -1928,6 +2060,18 @@ p {
   .nav a {
     min-height: 36px;
     font-size: 0.9rem;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .mobile-nav-toggle {
+    display: inline-flex;
+  }
+
+  .mobile-nav-panel:not([hidden]) {
+    display: block;
   }
 
   .main {
@@ -2222,14 +2366,12 @@ p {
 /* Responsive */
 @media (max-width: 640px) {
   .header-inner {
-    flex-direction: column;
+    flex-direction: row;
     gap: 0.5rem;
   }
 
   .nav {
-    gap: 1rem;
-    flex-wrap: wrap;
-    justify-content: center;
+    display: none;
   }
 
   h1 { font-size: 1.5rem; }
@@ -2319,6 +2461,22 @@ body:has(.daily-redesign) .nav .nav-dropdown-menu a {
 body:has(.daily-redesign) .nav .nav-dropdown-menu a:hover,
 body:has(.daily-redesign) .nav .nav-dropdown-menu a:focus-visible {
   color: #1f1b18;
+}
+
+body:has(.daily-redesign) .mobile-nav-toggle {
+  border-color: #e4d9ca;
+  color: #2a2520;
+  background: #fbfaf7;
+}
+
+body:has(.daily-redesign) .mobile-nav-toggle:hover,
+body:has(.daily-redesign) .mobile-nav-toggle:focus-visible {
+  background: #f4efe7;
+}
+
+body:has(.daily-redesign) .mobile-nav-panel {
+  border-top-color: #e9e2d8;
+  background: #fbfaf7;
 }
 
 .daily-redesign {
@@ -3372,17 +3530,17 @@ body:has(.daily-redesign) .nav .nav-dropdown-menu a:focus-visible {
   }
 
   body:has(.daily-redesign) .nav {
-    flex: 0 1 auto;
-    flex-wrap: nowrap;
-    justify-content: flex-start;
-    gap: 1rem;
-    overflow: hidden;
+    display: none;
   }
 
   body:has(.daily-redesign) .nav a {
     min-height: 42px;
     font-size: 0.9rem;
     white-space: nowrap;
+  }
+
+  body:has(.daily-redesign) .mobile-nav-toggle {
+    flex: 0 0 auto;
   }
 
   .daily-redesign,
