@@ -271,6 +271,88 @@ test('sports subtopic rendering chooses storylines before raw fallback items', (
   assert.equal(view.subtopics[0].storylines[0].title, '英超第 36 轮赛果');
 });
 
+test('sports view keeps football and FPL storylines as primary subtopic content', () => {
+  const data = baseData();
+  data.items.push(
+    {
+      id: 2,
+      title: 'FPL raw title should stay in refs',
+      summary: 'Raw FPL fallback summary should not become the primary subtopic list.',
+      url: 'https://example.com/fpl',
+      source: 'fpl',
+      topic: 'sports',
+      subtopic: 'fpl',
+    } as any,
+  );
+  data.sports_page!.subtopics = [
+    {
+      id: 'football',
+      label: '足球',
+      title: '足球今日概述',
+      summary: '足球顶部概述可以保留，但主体应继续展示多条聚合主线。',
+      kind: 'league',
+      storylines: [
+        {
+          id: 'arsenal-west-ham',
+          title: '阿森纳 1-0 西汉姆：VAR 改判与争冠走势',
+          summary: '阿森纳客场小胜西汉姆，VAR 改判成为比赛转折，争冠形势继续胶着。',
+          items: [{ ref: 1, note: '阿森纳争冠关键战' }],
+        },
+        {
+          id: 'rashford-barcelona',
+          title: '拉什福德助巴萨获胜',
+          summary: '拉什福德延续近期状态，成为巴萨进攻端的重要线索。',
+          items: [{ ref: 1, note: '拉什福德比赛表现' }],
+        },
+      ],
+      items: [{ ref: 1, label: '足球', note: 'Raw football fallback should not render as the main list' }],
+    },
+    {
+      id: 'fpl',
+      label: 'FPL',
+      title: 'FPL 今日概述',
+      summary: 'FPL 顶部概述可以保留，但主体应展示主线聚合。',
+      kind: 'fantasy',
+      storylines: [
+        {
+          id: 'fpl-gw36',
+          title: 'FPL 游戏周 36：轮换、伤病与关键球员',
+          summary: '游戏周 36 的核心变量集中在阵容轮换、伤病更新和奖励分变化。',
+          items: [{ ref: 2, note: 'FPL 游戏周 36 笔记' }],
+        },
+      ],
+      items: [{ ref: 2, label: 'FPL', note: 'Raw FPL fallback should not render as the main list' }],
+    },
+  ];
+
+  const view = buildSportsTopicPageView(data, topics[1]);
+
+  assert.equal(getSportsSubtopicRenderMode(view.subtopics[0]), 'storylines');
+  assert.equal(getSportsSubtopicRenderMode(view.subtopics[1]), 'storylines');
+  assert.equal(view.subtopics[0].storylines.length, 2);
+  assert.equal(view.subtopics[1].storylines.length, 1);
+  assert.equal(view.subtopics[0].refs[0].readerTitle, 'Raw football fallback should not render as the main list');
+  assert.equal(view.subtopics[1].storylines[0].refs[0].note, 'FPL 游戏周 36 笔记');
+});
+
+test('sports topic page only maps fallback refs inside the non-storylines branch', () => {
+  const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
+  const branchIndex = source.indexOf("getSportsSubtopicRenderMode(subtopic) === 'storylines'");
+  const storylinesIndex = source.indexOf('class="daily-sports-line-list"', branchIndex);
+  const fallbackIndex = source.indexOf('class="daily-story-list"', storylinesIndex);
+
+  assert.ok(branchIndex >= 0);
+  assert.ok(storylinesIndex > branchIndex);
+  assert.ok(fallbackIndex > storylinesIndex);
+
+  const storylinesBranch = source.slice(storylinesIndex, fallbackIndex);
+  const fallbackBranch = source.slice(fallbackIndex);
+
+  assert.match(storylinesBranch, /subtopic\.storylines\.map/);
+  assert.doesNotMatch(storylinesBranch, /subtopic\.refs\.map/);
+  assert.match(fallbackBranch, /subtopic\.refs\.map/);
+});
+
 test('sports topic page keeps subtopic other and otherItems anchors distinct', () => {
   const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
 
