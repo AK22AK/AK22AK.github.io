@@ -112,7 +112,9 @@ function getMatchNote(status: { reason?: string; note?: string }) {
 }
 
 function getOtherItemLabel(ref: { label?: string; item: { subtopic?: string } }) {
-  return getDisplayLabel(topic, ref.label, ref.item.subtopic) || topic.name;
+  const explicitLabel = getDisplayLabel(topic, ref.label, ref.item.subtopic);
+  if (explicitLabel && explicitLabel !== '其他值得看') return explicitLabel;
+  return '其他值得看';
 }
 
 function getSportsSubtopicNavLabel(subtopic: { id: string; label: string }) {
