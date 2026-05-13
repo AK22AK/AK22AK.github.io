@@ -15,6 +15,8 @@ export const refEntrySchema = z.object({
   id: z.string().optional(),
   ref: newsRefSchema,
   label: z.string().optional(),
+  categoryLabel: z.string().optional(),
+  storyLabel: z.string().optional(),
   note: z.string().optional(),
 });
 

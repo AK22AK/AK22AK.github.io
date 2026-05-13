@@ -182,6 +182,28 @@ test('otherItems use the Chinese note as the reader-facing title, not the catego
   assert.equal(view.otherItems[0].readerTitle, '布鲁诺·费尔南德斯谈奖杯、助攻纪录与未来去向');
 });
 
+test('sports otherItems preserve reader-facing labels even when source item subtopic is other', () => {
+  const data = baseData();
+  data.items[0].subtopic = 'other';
+  data.sports_page!.otherItems = [
+    {
+      ref: 1,
+      label: '足球',
+      categoryLabel: '高尔夫',
+      storyLabel: '高尔夫',
+      note: '麦克罗伊因脚趾伤势暂停美国 PGA 锦标赛练习',
+    },
+  ];
+
+  const view = buildSportsTopicPageView(data, topics[1]);
+
+  assert.equal(view.otherItems[0].label, '足球');
+  assert.equal(view.otherItems[0].categoryLabel, '高尔夫');
+  assert.equal(view.otherItems[0].storyLabel, '高尔夫');
+  assert.equal(view.otherItems[0].item.subtopic, 'other');
+  assert.equal(view.otherItems[0].readerTitle, '麦克罗伊因脚趾伤势暂停美国 PGA 锦标赛练习');
+});
+
 test('sports content schema preserves storylines and expanded match fields', () => {
   const parsed = sportsPageSchema.parse({
     overview: [],
@@ -225,7 +247,15 @@ test('sports content schema preserves storylines and expanded match fields', () 
         items: [{ ref: 1, label: '足球' }],
       },
     ],
-    otherItems: [],
+    otherItems: [
+      {
+        ref: 1,
+        label: '足球',
+        categoryLabel: '高尔夫',
+        storyLabel: '高尔夫',
+        note: '麦克罗伊因脚趾伤势暂停美国 PGA 锦标赛练习',
+      },
+    ],
   });
 
   const subtopic = parsed.subtopics[0] as any;
@@ -236,6 +266,8 @@ test('sports content schema preserves storylines and expanded match fields', () 
   assert.equal(subtopic.matchStatus[0].reason, '争冠关键战');
   assert.equal(subtopic.matchStatus[0].importance, 'lead');
   assert.equal(subtopic.matchStatus[0].priority, 1);
+  assert.equal((parsed.otherItems[0] as any).categoryLabel, '高尔夫');
+  assert.equal((parsed.otherItems[0] as any).storyLabel, '高尔夫');
 });
 
 test('sports subtopic rendering chooses storylines before raw fallback items', () => {
@@ -379,4 +411,19 @@ test('sports topic page keeps subtopic other and otherItems anchors distinct', (
   assert.match(source, /href=\{`#\$\{otherItemsSectionId\}`\}/);
   assert.match(source, /id=\{otherItemsSectionId\}/);
   assert.match(source, /isSports \? '其他值得看' : '其他'/);
+});
+
+test('sports otherItems label rendering does not let item.subtopic override reader-facing labels', () => {
+  const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
+  const functionStart = source.indexOf('function getOtherItemLabel');
+  const functionEnd = source.indexOf('function getSportsSubtopicNavLabel', functionStart);
+
+  assert.ok(functionStart >= 0);
+  assert.ok(functionEnd > functionStart);
+
+  const functionSource = source.slice(functionStart, functionEnd);
+
+  assert.match(functionSource, /ref\.categoryLabel \|\| ref\.label/);
+  assert.doesNotMatch(functionSource, /ref\.item\.subtopic/);
+  assert.doesNotMatch(functionSource, /getDisplayLabel\(topic, ref\.label, ref\.item\.subtopic\)/);
 });

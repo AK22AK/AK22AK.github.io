@@ -111,10 +111,11 @@ function getMatchNote(status: { reason?: string; note?: string }) {
   return status.reason || status.note || '';
 }
 
-function getOtherItemLabel(ref: { label?: string; item: { subtopic?: string } }) {
-  const explicitLabel = getDisplayLabel(topic, ref.label, ref.item.subtopic);
-  if (explicitLabel && explicitLabel !== '其他值得看') return explicitLabel;
-  return '其他值得看';
+function getOtherItemLabel(ref: { categoryLabel?: string; label?: string }) {
+  const fallbackLabel = isSports ? '其他值得看' : topic.name;
+  const explicitLabel = getDisplayLabel(topic, ref.categoryLabel || ref.label);
+  if (explicitLabel && explicitLabel !== fallbackLabel) return explicitLabel;
+  return fallbackLabel;
 }
 
 function getSportsSubtopicNavLabel(subtopic: { id: string; label: string }) {

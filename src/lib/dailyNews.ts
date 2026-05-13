@@ -130,6 +130,8 @@ export type RefEntry = {
   id?: string;
   ref: NewsRef;
   label?: string;
+  categoryLabel?: string;
+  storyLabel?: string;
   note?: string;
 };
 
@@ -870,6 +872,8 @@ function resolveViewRef(items: DailyNewsItem[], entry: RefEntry) {
     id: entry.id || `ref-${String(entry.ref)}`,
     ref: entry.ref,
     label: entry.label,
+    categoryLabel: entry.categoryLabel,
+    storyLabel: entry.storyLabel,
     note: entry.note,
     item,
   };
@@ -904,6 +908,7 @@ function resolveOtherItemRef(items: DailyNewsItem[], entry: RefEntry) {
   const viewRef = resolveViewRef(items, entry);
   const readerTitle = firstNonEmpty([
     entry.note,
+    entry.storyLabel,
     viewRef.item.ai_summary,
     viewRef.item.summary,
     viewRef.item.title,
