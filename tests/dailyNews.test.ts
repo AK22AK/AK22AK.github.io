@@ -335,6 +335,23 @@ test('sports view keeps football and FPL storylines as primary subtopic content'
   assert.equal(view.subtopics[1].storylines[0].refs[0].note, 'FPL 游戏周 36 笔记');
 });
 
+test('sports topic page does NOT render matchStatus or fixtures sections', () => {
+  const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
+  assert.doesNotMatch(source, /重点赛果/);
+  assert.doesNotMatch(source, /查看全部今日赛程/);
+  assert.doesNotMatch(source, /daily-match-list/);
+  assert.doesNotMatch(source, /daily-fixture-details/);
+  assert.doesNotMatch(source, /featuredMatchStatus/);
+});
+
+test('sports topic page still renders storylines with ref toggles and source chips', () => {
+  const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
+  assert.match(source, /daily-sports-line-list/);
+  assert.match(source, /subtopic\.storylines\.map/);
+  assert.match(source, /daily-ref-toggle/);
+  assert.match(source, /daily-ref-chip-row/);
+});
+
 test('sports topic page only maps fallback refs inside the non-storylines branch', () => {
   const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
   const branchIndex = source.indexOf("getSportsSubtopicRenderMode(subtopic) === 'storylines'");

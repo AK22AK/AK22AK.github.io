@@ -234,45 +234,7 @@ function getTopicSourceDescription(source: { id?: string; name: string; descript
                   <p>{subtopic.summary}</p>
                 </div>
               </div>
-              {subtopic.featuredMatchStatus.length > 0 && (
-                <div class="daily-match-list">
-                  <div class="daily-match-heading">
-                    <span>重点赛果 / 赛程</span>
-                  </div>
-                  {subtopic.featuredMatchStatus.map(status => (
-                    <a href={status.url || '#'} class="daily-match-row">
-                      <span>{getMatchTimeLabel(status)}</span>
-                      <strong>
-                        {status.competition ? <small>{status.competition}</small> : null}
-                        {getMatchTitle(status)}
-                      </strong>
-                      <em>{matchStatusLabels[status.status] || status.status}</em>
-                      {getMatchNote(status) ? <p>{getMatchNote(status)}</p> : null}
-                    </a>
-                  ))}
-                </div>
-              )}
-              {subtopic.fixtures.length > subtopic.featuredMatchStatus.length && (
-                <details class="daily-fixture-details">
-                  <summary>
-                    <span>查看全部今日赛程/赛果</span>
-                    <em>{subtopic.fixtures.length} 条</em>
-                  </summary>
-                  <div class="daily-fixture-list">
-                    {subtopic.fixtures.map(status => (
-                      <a href={status.url || '#'} class="daily-match-row daily-match-row--fixture">
-                        <span>{getMatchTimeLabel(status)}</span>
-                        <strong>
-                          {status.competition ? <small>{status.competition}</small> : null}
-                          {getMatchTitle(status)}
-                        </strong>
-                        <em>{matchStatusLabels[status.status] || status.status}</em>
-                        {getMatchNote(status) ? <p>{getMatchNote(status)}</p> : null}
-                      </a>
-                    ))}
-                  </div>
-                </details>
-              )}
+
               {getSportsSubtopicRenderMode(subtopic) === 'storylines' ? (
                 <div class="daily-sports-line-list">
                   {subtopic.storylines.map(line => {
