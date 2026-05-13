@@ -392,7 +392,9 @@ export function formatDateLabel(date: string) {
 export function getWeekdayLabel(date: string) {
   if (!date) return '';
   const weekdayNames = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'];
-  return weekdayNames[new Date(`${date}T00:00:00`).getDay()] || '';
+  const [year, month, day] = date.split('-').map(Number);
+  if (!year || !month || !day) return '';
+  return weekdayNames[new Date(Date.UTC(year, month - 1, day)).getUTCDay()] || '';
 }
 
 export function pubTimeValue(pubTime: string | undefined): number {
@@ -959,7 +961,12 @@ export function formatUpdateTime(updateTime: string | undefined) {
   if (!updateTime) return '';
   const date = new Date(updateTime);
   if (Number.isNaN(date.getTime())) return '';
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  return date.toLocaleTimeString('zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone: 'Asia/Shanghai',
+  });
 }
 
 export function buildDailyNewsHomeView(

@@ -4,6 +4,8 @@ import test from 'node:test';
 import {
   buildDailyNewsHomeView,
   buildSportsTopicPageView,
+  formatUpdateTime,
+  getWeekdayLabel,
   getSportsSubtopicRenderMode,
   type DailyNewsData,
   type TopicConfig,
@@ -24,6 +26,11 @@ const topics: TopicConfig[] = [
     subtopics: [{ id: 'football', name: '足球' }],
   },
 ];
+
+test('daily news date labels use China calendar semantics independent of build timezone', () => {
+  assert.equal(formatUpdateTime('2026-05-13T08:31:37+08:00'), '08:31');
+  assert.equal(getWeekdayLabel('2026-05-13'), '周三');
+});
 
 function baseData(): DailyNewsData {
   return {
