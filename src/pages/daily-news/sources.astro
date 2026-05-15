@@ -3,11 +3,13 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
+import Calendar from '../../components/Calendar.astro';
 import {
   buildSourceMeta,
   formatDateLabel,
   formatUpdateTime,
   getDailyNewsHomeHref,
+  getDailyNewsSourcesHref,
   getWeekdayLabel,
   groupItemsBySource,
   readSourcesIndex,
@@ -22,12 +24,8 @@ const newsData = await getCollection('daily-news');
 const dateEntries = newsData.filter(entry => entry.id !== 'topics');
 dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
 
-const url = new URL(Astro.request.url);
-const selectedDate = url.searchParams.get('date');
 const availableDates = dateEntries.map(entry => entry.data.date);
-const currentDate = selectedDate && availableDates.includes(selectedDate)
-  ? selectedDate
-  : (availableDates[0] || '');
+const currentDate = availableDates[0] || '';
 const currentIndex = availableDates.indexOf(currentDate);
 const previousDate = availableDates[currentIndex + 1];
 const nextDate = currentIndex > 0 ? availableDates[currentIndex - 1] : undefined;
@@ -50,9 +48,9 @@ const updateText = updatedAtLabel ? `${weekdayLabel} · ${updatedAtLabel}` : wee
       <section class="daily-date-block">
         <p class="daily-side-label">Daily</p>
         <div class="daily-date-line">
-          {previousDate ? <a href={`/daily-news/sources/?date=${previousDate}`} aria-label="前一天">‹</a> : <span></span>}
+          {previousDate ? <a href={getDailyNewsSourcesHref(previousDate)} aria-label="前一天">‹</a> : <span></span>}
           <strong>{dateLabel}</strong>
-          {nextDate ? <a href={`/daily-news/sources/?date=${nextDate}`} aria-label="后一天">›</a> : <span></span>}
+          {nextDate ? <a href={getDailyNewsSourcesHref(nextDate)} aria-label="后一天">›</a> : <span></span>}
         </div>
         <p>{updateText} 更新</p>
       </section>
@@ -102,12 +100,8 @@ const updateText = updatedAtLabel ? `${weekdayLabel} · ${updatedAtLabel}` : wee
         <div class="daily-section-head">
           <h2>归档</h2>
         </div>
-        <div class="daily-archive-list">
-          {availableDates.slice(0, 8).map(date => (
-            <a href={`/daily-news/sources/?date=${date}`} class={date === currentDate ? 'active' : ''}>{formatDateLabel(date)}</a>
-          ))}
-          <a href="/daily-news/archive/">更多日期</a>
-        </div>
+        <Calendar dates={availableDates} currentDate={currentDate} baseUrl="/daily-news/{date}/sources/" compact />
+        <p class="daily-archive-more"><a href="/daily-news/archive/">更多日期</a></p>
       </section>
     </main>
   </div>

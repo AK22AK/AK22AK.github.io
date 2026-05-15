@@ -5,6 +5,9 @@ import {
   buildDailyNewsHomeView,
   buildSportsTopicPageView,
   formatUpdateTime,
+  getDailyNewsHomeHref,
+  getDailyNewsSourcesHref,
+  getTopicHref,
   getWeekdayLabel,
   getSportsSubtopicRenderMode,
   type DailyNewsData,
@@ -30,6 +33,13 @@ const topics: TopicConfig[] = [
 test('daily news date labels use China calendar semantics independent of build timezone', () => {
   assert.equal(formatUpdateTime('2026-05-13T08:31:37+08:00'), '08:31');
   assert.equal(getWeekdayLabel('2026-05-13'), '周三');
+});
+
+test('daily news date links use static paths instead of query parameters', () => {
+  assert.equal(getDailyNewsHomeHref('2026-05-14'), '/daily-news/2026-05-14/');
+  assert.equal(getTopicHref('sports', '2026-05-14'), '/daily-news/2026-05-14/topic/sports/');
+  assert.equal(getDailyNewsSourcesHref('2026-05-14'), '/daily-news/2026-05-14/sources/');
+  assert.equal(getDailyNewsHomeHref(), '/daily-news/');
 });
 
 function baseData(): DailyNewsData {
@@ -433,4 +443,24 @@ test('sports otherItems label rendering does not let item.subtopic override read
   assert.match(functionSource, /ref\.categoryLabel \|\| ref\.label/);
   assert.doesNotMatch(functionSource, /ref\.item\.subtopic/);
   assert.doesNotMatch(functionSource, /getDisplayLabel\(topic, ref\.label, ref\.item\.subtopic\)/);
+});
+
+test('daily news pages do not rely on date query parameters for archive navigation', () => {
+  const files = [
+    'src/lib/dailyNews.ts',
+    'src/pages/daily-news/index.astro',
+    'src/pages/daily-news/[date]/index.astro',
+    'src/pages/daily-news/topic/[id].astro',
+    'src/pages/daily-news/[date]/topic/[id].astro',
+    'src/pages/daily-news/sources.astro',
+    'src/pages/daily-news/[date]/sources.astro',
+    'src/pages/daily-news/archive.astro',
+    'src/components/Calendar.astro',
+  ];
+  const source = files.map(file => fs.readFileSync(file, 'utf-8')).join('\n');
+
+  assert.doesNotMatch(source, /searchParams\.get\('date'\)/);
+  assert.doesNotMatch(source, /\?date=/);
+  assert.match(source, /params: \{ date/);
+  assert.match(source, /\/daily-news\/\{date\}\/sources\//);
 });

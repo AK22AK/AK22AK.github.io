@@ -1,15 +1,26 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
-import Calendar from '../../components/Calendar.astro';
+import Calendar from '../../../components/Calendar.astro';
 import {
   buildDailyNewsHomeView,
   getDailyNewsHomeHref,
   type DailyNewsData,
   type TopicConfig,
-} from '../../lib/dailyNews';
+} from '../../../lib/dailyNews';
+
+export async function getStaticPaths() {
+  const newsData = await getCollection('daily-news');
+  return newsData
+    .filter(entry => entry.id !== 'topics' && entry.data.daily_home)
+    .map(entry => ({
+      params: { date: entry.data.date },
+    }));
+}
+
+const { date } = Astro.params;
 
 const topicsPath = path.resolve('./src/data/daily-news-topics.json');
 const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
@@ -20,7 +31,7 @@ const dateEntries = newsData.filter(entry => entry.id !== 'topics' && entry.data
 dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
 
 const availableDates = dateEntries.map(entry => entry.data.date);
-const currentDate = availableDates[0] || '';
+const currentDate = date && availableDates.includes(date) ? date : (availableDates[0] || '');
 const currentIndex = availableDates.indexOf(currentDate);
 const previousDate = availableDates[currentIndex + 1];
 const nextDate = currentIndex > 0 ? availableDates[currentIndex - 1] : undefined;

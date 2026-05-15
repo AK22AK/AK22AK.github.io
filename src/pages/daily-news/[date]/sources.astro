@@ -1,58 +1,74 @@
 ---
-import BaseLayout from '../../layouts/BaseLayout.astro';
+import BaseLayout from '../../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
-import Calendar from '../../components/Calendar.astro';
+import Calendar from '../../../components/Calendar.astro';
 import {
-  buildDailyNewsHomeView,
+  buildSourceMeta,
+  formatDateLabel,
+  formatUpdateTime,
   getDailyNewsHomeHref,
-  type DailyNewsData,
+  getDailyNewsSourcesHref,
+  getWeekdayLabel,
+  groupItemsBySource,
+  readSourcesIndex,
   type TopicConfig,
-} from '../../lib/dailyNews';
+} from '../../../lib/dailyNews';
+
+export async function getStaticPaths() {
+  const newsData = await getCollection('daily-news');
+  return newsData
+    .filter(entry => entry.id !== 'topics')
+    .map(entry => ({
+      params: { date: entry.data.date },
+    }));
+}
+
+const { date } = Astro.params;
 
 const topicsPath = path.resolve('./src/data/daily-news-topics.json');
 const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
 const topics = topicsConfig.topics as TopicConfig[];
 
 const newsData = await getCollection('daily-news');
-const dateEntries = newsData.filter(entry => entry.id !== 'topics' && entry.data.daily_home);
+const dateEntries = newsData.filter(entry => entry.id !== 'topics');
 dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
 
 const availableDates = dateEntries.map(entry => entry.data.date);
-const currentDate = availableDates[0] || '';
+const currentDate = date && availableDates.includes(date) ? date : (availableDates[0] || '');
 const currentIndex = availableDates.indexOf(currentDate);
 const previousDate = availableDates[currentIndex + 1];
 const nextDate = currentIndex > 0 ? availableDates[currentIndex - 1] : undefined;
 const currentEntry = dateEntries.find(entry => entry.data.date === currentDate);
-const currentData = currentEntry?.data as DailyNewsData | undefined;
-
-if (!currentData) {
-  throw new Error('Missing daily news data');
-}
-
-const view = buildDailyNewsHomeView(currentData, topics, availableDates);
-const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updatedAtLabel}` : view.weekdayLabel;
+const currentItems = currentEntry?.data.items || [];
+const sourceMeta = buildSourceMeta(topics);
+const sourcesIndex = readSourcesIndex();
+const dailySourceGroups = groupItemsBySource(currentItems, sourcesIndex, currentDate, sourceMeta);
+const topicNameMap = new Map(topics.map(topic => [topic.id, topic.name]));
+const dateLabel = formatDateLabel(currentDate);
+const weekdayLabel = getWeekdayLabel(currentDate);
+const updatedAtLabel = formatUpdateTime(currentEntry?.data.update_time);
+const updateText = updatedAtLabel ? `${weekdayLabel} · ${updatedAtLabel}` : weekdayLabel;
 ---
 
-<BaseLayout title={`${view.dateLabel} 日报 - AK22AK`} description="AK22AK 每日资讯入口" variant="news">
-  <div class="daily-redesign daily-redesign--home">
+<BaseLayout title={`来源 - ${dateLabel} 日报 - AK22AK`} description="按来源查看每日资讯原文" variant="news">
+  <div class="daily-redesign daily-redesign--single">
     <aside class="daily-side">
+      <a class="daily-back-link" href={getDailyNewsHomeHref(currentDate)}>← 返回日报</a>
       <section class="daily-date-block">
         <p class="daily-side-label">Daily</p>
         <div class="daily-date-line">
-          {previousDate ? <a href={getDailyNewsHomeHref(previousDate)} aria-label="前一天">‹</a> : <span></span>}
-          <strong>{view.dateLabel}</strong>
-          {nextDate ? <a href={getDailyNewsHomeHref(nextDate)} aria-label="后一天">›</a> : <span></span>}
+          {previousDate ? <a href={getDailyNewsSourcesHref(previousDate)} aria-label="前一天">‹</a> : <span></span>}
+          <strong>{dateLabel}</strong>
+          {nextDate ? <a href={getDailyNewsSourcesHref(nextDate)} aria-label="后一天">›</a> : <span></span>}
         </div>
         <p>{updateText} 更新</p>
       </section>
-
       <section>
         <p class="daily-side-label">On This Page</p>
-        <nav class="daily-side-nav" aria-label="日报导航">
-          <a class="active" href="#highlights" data-daily-section-link><span>热点</span><small>{view.highlights.length}</small></a>
-          <a href="#topics" data-daily-section-link><span>主题</span><small>{view.topics.length}</small></a>
+        <nav class="daily-side-nav" aria-label="来源导航">
+          <a class="active" href="#sources" data-daily-section-link><span>来源</span><small>{dailySourceGroups.length}</small></a>
           <a href="#archive" data-daily-section-link><span>归档</span><small>→</small></a>
         </nav>
       </section>
@@ -60,57 +76,33 @@ const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updated
 
     <main class="daily-content">
       <div class="daily-mobile-date">
-        <span>‹ {view.dateLabel} ›</span>
-        <span>{view.weekdayLabel}{view.updatedAtLabel ? ` · ${view.updatedAtLabel}` : ''}</span>
+        <span>‹ {dateLabel} ›</span>
+        <span>{updateText}</span>
       </div>
-      <nav class="daily-mobile-picker" aria-label="日报快捷导航">
-        <a class="active" href="#highlights" data-daily-section-link>热点</a>
-        <a href="#topics" data-daily-section-link>主题</a>
+      <nav class="daily-mobile-picker" aria-label="来源快捷导航">
+        <a class="active" href="#sources" data-daily-section-link>来源</a>
         <a href="#archive" data-daily-section-link>归档</a>
       </nav>
 
       <header class="daily-hero">
         <div class="daily-meta">
-          <span>{view.stats.rawItems} 条原文</span>
-          <span>{view.stats.topics} 个主题</span>
-          <span>{view.stats.highlights} 条热点</span>
+          <span>{currentItems.length} 条原文</span>
+          <span>{dailySourceGroups.length} 个来源</span>
         </div>
-        <h1>{view.dateLabel} 日报</h1>
+        <h1>来源</h1>
       </header>
 
-      <section id="highlights" class="daily-section daily-anchor">
+      <section id="sources" class="daily-section daily-anchor">
         <div class="daily-section-head">
-          <h2>今日热点</h2>
+          <h2>当日来源</h2>
         </div>
-        <ol class="daily-highlight-list">
-          {view.highlights.map(highlight => (
-            <li>
-              <a href={highlight.href}>
-                <span class="daily-rank">{highlight.rank}</span>
-                <div>
-                  <strong>{highlight.title}</strong>
-                  <p>{highlight.summary}</p>
-                  <em>{highlight.label}</em>
-                </div>
-              </a>
-            </li>
-          ))}
-        </ol>
-      </section>
-
-      <section id="topics" class="daily-section daily-anchor">
-        <div class="daily-section-head">
-          <h2>主题</h2>
-        </div>
-        <div class="daily-topic-list">
-          {view.topics.map(topic => (
-            <a class="daily-topic-row" href={topic.href}>
-              <strong>{topic.name}</strong>
-              <div>
-                <p>{topic.rawItems} 条原文 · {topic.sources} 个来源</p>
-                <span>{topic.tags.join(' / ')}</span>
-              </div>
-            </a>
+        <div class="daily-source-list">
+          {dailySourceGroups.map(group => (
+            <div class="daily-source-row">
+              <strong>{group.name}</strong>
+              <span>{topicNameMap.get(group.topic) || group.topic}</span>
+              <em>{group.count} 条</em>
+            </div>
           ))}
         </div>
       </section>
@@ -119,7 +111,7 @@ const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updated
         <div class="daily-section-head">
           <h2>归档</h2>
         </div>
-        <Calendar dates={availableDates} currentDate={currentDate} compact />
+        <Calendar dates={availableDates} currentDate={currentDate} baseUrl="/daily-news/{date}/sources/" compact />
         <p class="daily-archive-more"><a href="/daily-news/archive/">更多日期</a></p>
       </section>
     </main>
@@ -153,7 +145,7 @@ const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updated
   function updateActive() {
     ticking = false;
     let nextId = sections[0]?.id || '';
-    const offset = window.innerWidth <= 820 ? 220 : 142;
+    const offset = window.innerWidth <= 900 ? 170 : 142;
     sections.forEach(section => {
       if (section.getBoundingClientRect().top <= offset) nextId = section.id;
     });

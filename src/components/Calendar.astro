@@ -3,12 +3,20 @@ interface Props {
   dates: string[];
   currentDate?: string;
   baseUrl?: string;
+  compact?: boolean;
+  initialMonth?: string;
 }
 
-const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
+const { dates, currentDate, baseUrl = '/daily-news/', compact = false, initialMonth } = Astro.props;
 ---
 
-<div class="calendar" data-dates={JSON.stringify(dates)} data-current={currentDate || ''} data-base={baseUrl}>
+<div
+  class:list={['calendar', { 'calendar--compact': compact }]}
+  data-dates={JSON.stringify(dates)}
+  data-current={currentDate || ''}
+  data-base={baseUrl}
+  data-initial-month={initialMonth || currentDate?.slice(0, 7) || ''}
+>
   <div class="calendar-mobile-bar">
     <button class="cal-mobile-toggle" type="button" aria-label="切换日期" aria-expanded="false">
       <span aria-hidden="true">🗓</span>
@@ -106,6 +114,17 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
   .calendar :global(.cal-day.today) {
     border: 1.5px solid #2563eb;
   }
+  .calendar--compact {
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+  }
+  .calendar--compact .calendar-panel {
+    max-width: 360px;
+  }
+  .calendar--compact .calendar-mobile-bar {
+    display: none;
+  }
 
   @media (max-width: 768px) {
     .calendar {
@@ -202,6 +221,7 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
     document.querySelectorAll('.calendar').forEach((calendar) => {
       const dates = JSON.parse(calendar.getAttribute('data-dates') || '[]');
       const currentDate = calendar.getAttribute('data-current') || '';
+      const initialMonth = calendar.getAttribute('data-initial-month') || '';
       const dateSet = new Set(dates);
 
       const monthEl = calendar.querySelector('.cal-month');
@@ -216,9 +236,19 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
       let year;
       let month;
 
-      const initDate = currentDate ? new Date(`${currentDate}T00:00:00`) : new Date();
-      year = initDate.getFullYear();
-      month = initDate.getMonth();
+      const [initialYear, initialMonthNumber] = initialMonth.split('-').map(Number);
+      if (initialYear && initialMonthNumber) {
+        year = initialYear;
+        month = initialMonthNumber - 1;
+      } else if (currentDate) {
+        const [currentYear, currentMonthNumber] = currentDate.split('-').map(Number);
+        year = currentYear;
+        month = currentMonthNumber - 1;
+      } else {
+        const initDate = new Date();
+        year = initDate.getFullYear();
+        month = initDate.getMonth();
+      }
 
       function render() {
         monthEl.textContent = `${year}年${month + 1}月`;
@@ -244,8 +274,9 @@ const { dates, currentDate, baseUrl = '/daily-news/' } = Astro.props;
           if (hasData) {
             el.classList.add('has-data');
             const base = calendar.getAttribute('data-base') || '/daily-news/';
-            const sep = base.includes('?') ? '&' : '?';
-            el.href = `${base}${sep}date=${dateStr}`;
+            el.href = base.includes('{date}')
+              ? base.replace('{date}', dateStr)
+              : `${base.replace(/\/?$/, '/')}${dateStr}/`;
           }
 
           if (isOtherMonth) el.classList.add('other-month');

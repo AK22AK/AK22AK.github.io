@@ -833,16 +833,20 @@ export function groupItemsBySource(
     .filter((group): group is NonNullable<typeof group> => Boolean(group));
 }
 
-export function getTopicHref(topicId: string, date: string) {
-  return `/daily-news/topic/${topicId}/?date=${date}`;
+export function getDailyNewsHomeHref(date?: string) {
+  return date ? `/daily-news/${date}/` : '/daily-news/';
+}
+
+export function getTopicHref(topicId: string, date?: string) {
+  return date ? `/daily-news/${date}/topic/${topicId}/` : `/daily-news/topic/${topicId}/`;
 }
 
 export function getTopicAnchorHref(topicId: string, date: string, anchor: string) {
   return `${getTopicHref(topicId, date)}#${anchor}`;
 }
 
-export function getDailyNewsHomeHref(date: string) {
-  return `/daily-news/?date=${date}`;
+export function getDailyNewsSourcesHref(date?: string) {
+  return date ? `/daily-news/${date}/sources/` : '/daily-news/sources/';
 }
 
 function requireContract<T>(value: T | undefined, name: string): T {
@@ -938,7 +942,7 @@ function resolveHomeTarget(target: DailyNewsHomeTarget, date: string) {
   }
 
   if (target.type === 'special' && target.specialSlug) {
-    return `/daily-news/special/${target.specialSlug}/?date=${date}`;
+    return `/daily-news/${date}/special/${target.specialSlug}/`;
   }
 
   throw new Error(`Invalid daily home target: ${JSON.stringify(target)}`);

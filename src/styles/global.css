@@ -3260,6 +3260,24 @@ body:has(.daily-redesign) .mobile-nav-panel {
   text-decoration: none;
 }
 
+.daily-calendar-list {
+  max-width: 360px;
+}
+
+.daily-archive-more {
+  margin-top: 1rem;
+}
+
+.daily-archive-more a {
+  color: #5d5751;
+  font-size: 0.9rem;
+  font-weight: 620;
+}
+
+.daily-archive-more a:hover {
+  color: #171514;
+}
+
 @media (max-width: 900px) {
   body:has(.daily-redesign) {
     --daily-news-mobile-header-height: 59px;

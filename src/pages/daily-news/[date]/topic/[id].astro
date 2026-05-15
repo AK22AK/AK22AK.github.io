@@ -1,5 +1,5 @@
 ---
-import BaseLayout from '../../../layouts/BaseLayout.astro';
+import BaseLayout from '../../../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -13,20 +13,25 @@ import {
   getTopicHref,
   type DailyNewsData,
   type TopicConfig,
-} from '../../../lib/dailyNews';
+} from '../../../../lib/dailyNews';
 
 export async function getStaticPaths() {
   const topicsPath = path.resolve('./src/data/daily-news-topics.json');
   const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
   const topics = (topicsConfig.topics as TopicConfig[])
     .filter(topic => topic.active !== false && ['tech', 'sports'].includes(topic.id));
-  return topics.map(topic => ({
-    params: { id: topic.id },
-    props: { topic },
-  }));
+  const newsData = await getCollection('daily-news');
+  const dateEntries = newsData.filter(entry => entry.id !== 'topics');
+  return dateEntries.flatMap(entry => topics
+    .filter(topic => topic.id === 'sports' ? entry.data.sports_page : entry.data.topic_pages?.[topic.id])
+    .map(topic => ({
+      params: { date: entry.data.date, id: topic.id },
+      props: { topic },
+    })));
 }
 
 const { topic } = Astro.props as { topic: TopicConfig };
+const { date } = Astro.params;
 const topicsPath = path.resolve('./src/data/daily-news-topics.json');
 const topicsConfig = JSON.parse(fs.readFileSync(topicsPath, 'utf-8'));
 const allTopics = topicsConfig.topics as TopicConfig[];
@@ -38,7 +43,7 @@ const dateEntries = newsData
 dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
 
 const availableDates = dateEntries.map(entry => entry.data.date);
-const currentDate = availableDates[0] || '';
+const currentDate = date && availableDates.includes(date) ? date : (availableDates[0] || '');
 const currentIndex = availableDates.indexOf(currentDate);
 const previousDate = availableDates[currentIndex + 1];
 const nextDate = currentIndex > 0 ? availableDates[currentIndex - 1] : undefined;

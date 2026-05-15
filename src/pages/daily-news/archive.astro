@@ -3,6 +3,7 @@ import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getCollection } from 'astro:content';
 import fs from 'node:fs';
 import path from 'node:path';
+import Calendar from '../../components/Calendar.astro';
 import {
   formatDateLabel,
   getDailyNewsHomeHref,
@@ -16,7 +17,7 @@ const topics = (topicsConfig.topics as TopicConfig[])
   .filter(topic => topic.active !== false && ['tech', 'sports'].includes(topic.id));
 
 const newsData = await getCollection('daily-news');
-const dateEntries = newsData.filter(entry => entry.id !== 'topics');
+const dateEntries = newsData.filter(entry => entry.id !== 'topics' && entry.data.daily_home);
 dateEntries.sort((a, b) => b.data.date.localeCompare(a.data.date));
 
 const currentDate = dateEntries[0]?.data.date || '';
@@ -114,10 +115,12 @@ const topicStats = topics.map(topic => {
                   <p>{entries.length} 期日报</p>
                 </div>
               </div>
-              <div class="daily-archive-list">
-                {entries.map(entry => (
-                  <a href={getDailyNewsHomeHref(entry.data.date)}>{formatDateLabel(entry.data.date)}</a>
-                ))}
+              <div class="daily-calendar-list">
+                <Calendar
+                  dates={entries.map(entry => entry.data.date)}
+                  currentDate={entries.some(entry => entry.data.date === currentDate) ? currentDate : entries[0]?.data.date}
+                  initialMonth={month}
+                />
               </div>
             </section>
           );
