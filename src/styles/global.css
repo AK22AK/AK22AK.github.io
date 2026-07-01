@@ -2682,7 +2682,9 @@ body:has(.daily-redesign) .mobile-nav-panel {
   line-height: 1.25;
 }
 
-.daily-section-head span {
+.daily-section-head span,
+.daily-section-head p {
+  margin: 0;
   color: #aaa39c;
   font-size: 0.86rem;
   font-weight: 500;
@@ -2816,6 +2818,205 @@ body:has(.daily-redesign) .mobile-nav-panel {
   padding: 22px 0;
   border-bottom: 1px solid #ece6dd;
   color: inherit;
+}
+
+.daily-feed-side-section {
+  margin-top: 2rem;
+}
+
+.daily-feed-hero h1 {
+  letter-spacing: 0;
+}
+
+.daily-field-nav a,
+.daily-field-picker a {
+  cursor: pointer;
+}
+
+.daily-feed-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.daily-feed-card {
+  border-top: 1px solid #ded8cf;
+}
+
+.daily-feed-card[hidden] {
+  display: none;
+}
+
+.daily-feed-card-main {
+  display: grid;
+  grid-template-columns: 3.4rem minmax(0, 1fr);
+  gap: 1rem;
+  padding: 1.25rem 0 1rem;
+  color: inherit;
+}
+
+.daily-feed-card-main:hover {
+  text-decoration: none;
+}
+
+.daily-feed-card-main:hover h3 {
+  color: #111;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.daily-feed-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem 0.6rem;
+  margin-bottom: 0.5rem;
+  color: #8f867c;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.daily-feed-card-meta span + span::before {
+  content: '/';
+  margin-right: 0.55rem;
+  color: #c7bfb5;
+}
+
+.daily-morning-feed-section {
+  border-top: 2px solid #26211c;
+  border-bottom: 0;
+  padding-bottom: 28px;
+}
+
+.daily-feed-section {
+  padding-top: 28px;
+}
+
+.daily-morning-feed-list {
+  display: grid;
+  gap: 0;
+}
+
+.daily-morning-feed-row {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  gap: 1rem;
+  align-items: baseline;
+  padding: 18px 0;
+  border-bottom: 1px solid #ece6dd;
+  color: inherit;
+}
+
+.daily-morning-feed-row:hover {
+  text-decoration: none;
+}
+
+.daily-morning-feed-row:hover strong {
+  color: #111;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.daily-morning-feed-row span {
+  overflow: hidden;
+  color: #8a4b24;
+  font-size: 0.78rem;
+  font-weight: 760;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.daily-morning-feed-row strong {
+  color: #25211d;
+  font-size: 0.98rem;
+  line-height: 1.55;
+}
+
+.daily-morning-feed-row:last-child {
+  border-bottom: 0;
+}
+
+.daily-feed-card h3 {
+  margin: 0 0 0.55rem;
+  color: #201c18;
+  font-size: 1.08rem;
+  line-height: 1.55;
+}
+
+.daily-feed-card p {
+  margin: 0;
+  color: #5d5852;
+  font-size: 0.94rem;
+  line-height: 1.8;
+}
+
+.daily-feed-card-footer {
+  padding: 0 0 1.15rem 4.4rem;
+}
+
+.daily-feed-source-chips {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.daily-source-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.daily-source-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 0 0.55rem;
+  border: 1px solid #e6ded4;
+  border-radius: 999px;
+  color: #8a4b24;
+  background: #fbfaf8;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.daily-source-chip:hover {
+  border-color: #d6cbbd;
+  color: #6f3b1d;
+  background: #fffefb;
+}
+
+.daily-source-chip[aria-expanded="true"] {
+  border-color: #8a4b24;
+  color: #fffefb;
+  background: #8a4b24;
+}
+
+.daily-source-chip-links {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 42rem;
+  margin-top: 0.5rem;
+}
+
+.daily-source-chip-links[hidden] {
+  display: none;
+}
+
+.daily-source-chip-links a {
+  display: block;
+  padding: 0.78rem 0.9rem;
+  border: 1px solid #e4ddd3;
+  border-radius: 8px;
+  color: #4c4741;
+  background: #fffefb;
+  line-height: 1.55;
+}
+
+.daily-source-chip-links a:hover {
+  border-color: #d6cbbd;
+  color: #111;
+  text-decoration: none;
 }
 
 .daily-topic-row p {
@@ -3424,6 +3625,38 @@ body:has(.daily-redesign) .mobile-nav-panel {
     grid-template-columns: 36px minmax(0, 1fr);
     gap: 14px;
     padding: 18px 0;
+  }
+
+  .daily-feed-card-main {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 14px;
+    padding: 18px 0 14px;
+  }
+
+  .daily-morning-feed-row {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+    padding: 16px 0;
+  }
+
+  .daily-feed-card h3 {
+    font-size: 0.98rem;
+    line-height: 1.52;
+  }
+
+  .daily-feed-card p {
+    font-size: 0.9rem;
+    line-height: 1.72;
+  }
+
+  .daily-feed-card-footer {
+    display: grid;
+    gap: 0.75rem;
+    padding-left: 50px;
+  }
+
+  .daily-source-chip-links a {
+    width: 100%;
   }
 
   .daily-overview-summary {

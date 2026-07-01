@@ -17,8 +17,8 @@ const mobilePrimaryItems = [
 
 const newsItems = [
   { href: '/daily-news/', label: '资讯首页' },
-  { href: '/daily-news/topic/tech/', label: '科技' },
-  { href: '/daily-news/topic/sports/', label: '体育' },
+  { href: '/daily-news/?field=tech', label: '科技' },
+  { href: '/daily-news/?field=sports', label: '体育' },
   { href: '/daily-news/archive/', label: '归档' },
   { href: '/daily-news/sources/', label: '来源' },
 ];
@@ -35,8 +35,8 @@ const newsItems = [
         <a href="/daily-news/" class="nav-dropdown-trigger">资讯</a>
         <div class="nav-dropdown-menu" aria-label="资讯快速入口">
           <a href="/daily-news/">日报首页</a>
-          <a href="/daily-news/topic/tech/">科技</a>
-          <a href="/daily-news/topic/sports/">体育</a>
+          <a href="/daily-news/?field=tech">科技</a>
+          <a href="/daily-news/?field=sports">体育</a>
           <a href="/daily-news/archive/">归档</a>
           <a href="/daily-news/sources/">来源</a>
         </div>

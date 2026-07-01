@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import test from 'node:test';
 import {
   buildDailyNewsHomeView,
+  buildDailyNewsFeedView,
   buildSportsTopicPageView,
   formatUpdateTime,
   getDailyNewsHomeHref,
@@ -35,9 +36,9 @@ test('daily news date labels use China calendar semantics independent of build t
   assert.equal(getWeekdayLabel('2026-05-13'), '周三');
 });
 
-test('daily news date links use static paths instead of query parameters', () => {
+test('daily news date links use static paths and field filters use query parameters', () => {
   assert.equal(getDailyNewsHomeHref('2026-05-14'), '/daily-news/2026-05-14/');
-  assert.equal(getTopicHref('sports', '2026-05-14'), '/daily-news/2026-05-14/topic/sports/');
+  assert.equal(getTopicHref('sports', '2026-05-14'), '/daily-news/2026-05-14/?field=sports');
   assert.equal(getDailyNewsSourcesHref('2026-05-14'), '/daily-news/2026-05-14/sources/');
   assert.equal(getDailyNewsHomeHref(), '/daily-news/');
 });
@@ -118,6 +119,167 @@ test('home dailyLine highlights use the target dailyLine summary when the home s
     view.highlights[0].summary,
     'DeepSeek 与月之暗面融资线索共同指向中国 AI 基础设施赛道资本集中度正在快速提升。',
   );
+});
+
+test('daily news feed converts recent home highlights into mixed feed items with refs', () => {
+  const data = baseData();
+  data.daily_home!.highlights = [
+    {
+      id: 'highlight-ai',
+      title: 'AI 投融资',
+      summary: '融资升温。',
+      label: '科技',
+      target: {
+        type: 'dailyLine',
+        topicSlug: 'tech',
+        dailyLineId: 'line-ai',
+      },
+    },
+    {
+      id: 'highlight-football',
+      title: '阿森纳争冠关键战',
+      summary: '阿森纳保持争冠压力。',
+      label: '体育',
+      target: {
+        type: 'subtopic',
+        topicSlug: 'sports',
+        subtopicId: 'football',
+      },
+    },
+  ];
+  data.topic_pages!.tech.dailyLines = [
+    {
+      id: 'line-ai',
+      title: '中国大模型融资热潮',
+      summary: 'DeepSeek 与月之暗面融资线索共同指向中国 AI 基础设施赛道资本集中。',
+      tags: ['AI'],
+      items: [{ ref: 2 }],
+    },
+  ];
+  data.sports_page!.subtopics = [
+    {
+      id: 'football',
+      label: '足球',
+      title: '今日足球',
+      summary: '足球主线。',
+      kind: 'league',
+      storylines: [
+        {
+          id: 'arsenal',
+          title: '阿森纳争冠关键战',
+          summary: '阿森纳获胜后继续追赶榜首。',
+          items: [{ ref: 1, note: '阿森纳比赛' }],
+        },
+      ],
+      items: [{ ref: 1 }],
+    },
+  ];
+
+  const view = buildDailyNewsFeedView(data, topics, [data.date]);
+
+  assert.equal(view.feedItems.length, 2);
+  assert.equal(view.feedItems[0].rank, '01');
+  assert.equal(view.filters.map(filter => filter.id).join(','), 'all,tech,sports');
+  assert.equal(view.feedItems.find(item => item.fieldId === 'tech')?.refs[0].title, 'Second raw title');
+  assert.equal(view.feedItems.find(item => item.fieldId === 'sports')?.refs[0].title, 'Raw English sports title');
+});
+
+test('daily news feed falls back to raw items for legacy dates without home contracts', () => {
+  const data = baseData();
+  delete data.daily_home;
+  delete data.topic_pages;
+  delete data.sports_page;
+
+  const view = buildDailyNewsFeedView(data, topics, [data.date]);
+  const sportsView = buildDailyNewsFeedView(data, topics, [data.date], 'sports');
+
+  assert.equal(view.feedItems.length > 0, true);
+  assert.equal(view.filters.some(filter => filter.id === 'sports'), true);
+  assert.equal(sportsView.feedItems.every(item => item.fieldId === 'sports'), true);
+  assert.equal(sportsView.filters.find(filter => filter.id === 'sports')?.active, true);
+});
+
+test('daily news feed separates morning briefs from the mixed information stream', () => {
+  const data = baseData();
+  delete data.daily_home;
+  delete data.topic_pages;
+  delete data.sports_page;
+  data.items.unshift({
+    _idx: 3,
+    title: '少数派早报：今日值得关注的产品更新',
+    summary: '早报正文。',
+    url: 'https://example.com/morning',
+    source: 'sspai',
+    topic: 'tech',
+    subtopic: 'morning-brief',
+    pub_time: '2026-05-09T09:00:00+08:00',
+  });
+
+  const view = buildDailyNewsFeedView(data, topics, [data.date]);
+
+  assert.equal(view.morningBriefs.length, 1);
+  assert.equal(view.morningBriefs[0].title, '少数派早报：今日值得关注的产品更新');
+  assert.equal(view.feedItems.some(item => item.title.includes('早报')), false);
+});
+
+test('daily news feed exposes source names through refs for source chips', () => {
+  const data = baseData();
+  delete data.daily_home;
+  delete data.topic_pages;
+  delete data.sports_page;
+
+  const view = buildDailyNewsFeedView(data, topics, [data.date]);
+  const sportsItem = view.feedItems.find(item => item.fieldId === 'sports');
+
+  assert.equal(sportsItem?.refs[0].sourceName, 'source-a');
+  assert.equal(sportsItem?.refs[0].title, 'Raw English sports title');
+});
+
+test('daily news feed groups multiple refs from the same source into one source chip', () => {
+  const data = baseData();
+  data.items.push(
+    {
+      _idx: 3,
+      title: 'Another source-a article',
+      summary: 'Same source supports the same story.',
+      url: 'https://example.com/c',
+      source: 'source-a',
+      topic: 'sports',
+      subtopic: 'football',
+    },
+    {
+      _idx: 4,
+      title: 'Third-party follow-up',
+      summary: 'Another source supports the same story.',
+      url: 'https://example.com/d',
+      source: 'source-c',
+      topic: 'sports',
+      subtopic: 'football',
+    },
+  );
+  data.story_clusters = [
+    {
+      id: 'multi-source-story',
+      topic: 'sports',
+      subtopic: 'football',
+      title: '多来源足球线索',
+      summary: '同一条线索有多个来源，其中 source-a 提供两篇文章。',
+      refs: [1, 3, 4],
+      quality_reasons: ['多来源出现'],
+    },
+  ];
+
+  const view = buildDailyNewsFeedView(data, topics, [data.date]);
+  const item = view.feedItems[0];
+
+  assert.equal(item.sourceCount, 2);
+  assert.deepEqual(item.sourceGroups.map(group => group.sourceName), ['source-a', 'source-c']);
+  assert.equal(item.sourceGroups[0].refs.length, 2);
+  assert.deepEqual(item.sourceGroups[0].refs.map(ref => ref.title), [
+    'Raw English sports title',
+    'Another source-a article',
+  ]);
+  assert.equal(item.sourceGroups[1].refs[0].title, 'Third-party follow-up');
 });
 
 test('sports view exposes storylines with reader-facing refs before raw fallback items', () => {
@@ -384,65 +546,35 @@ test('sports view keeps football and FPL storylines as primary subtopic content'
   assert.equal(view.subtopics[1].storylines[0].refs[0].note, 'FPL 游戏周 36 笔记');
 });
 
-test('sports topic page does NOT render matchStatus or fixtures sections', () => {
+test('legacy topic pages redirect to field-filtered daily feeds', () => {
   const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
-  assert.doesNotMatch(source, /重点赛果/);
-  assert.doesNotMatch(source, /查看全部今日赛程/);
-  assert.doesNotMatch(source, /daily-match-list/);
-  assert.doesNotMatch(source, /daily-fixture-details/);
-  assert.doesNotMatch(source, /featuredMatchStatus/);
+  const datedSource = fs.readFileSync('src/pages/daily-news/[date]/topic/[id].astro', 'utf-8');
+
+  assert.match(source, /\/daily-news\/\?field=/);
+  assert.match(datedSource, /\/daily-news\/\$\{date\}\/\?field=/);
+  assert.match(source, /window\.location\.replace/);
+  assert.match(datedSource, /window\.location\.replace/);
+  assert.doesNotMatch(source, /daily-sports-line-list/);
+  assert.doesNotMatch(datedSource, /daily-sports-line-list/);
 });
 
-test('sports topic page still renders storylines with ref toggles and source chips', () => {
-  const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
-  assert.match(source, /daily-sports-line-list/);
-  assert.match(source, /subtopic\.storylines\.map/);
-  assert.match(source, /daily-ref-toggle/);
-  assert.match(source, /daily-ref-chip-row/);
-});
+test('daily feed component owns field filters and expandable sources', () => {
+  const source = fs.readFileSync('src/components/DailyNewsFeed.astro', 'utf-8');
 
-test('sports topic page only maps fallback refs inside the non-storylines branch', () => {
-  const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
-  const branchIndex = source.indexOf("getSportsSubtopicRenderMode(subtopic) === 'storylines'");
-  const storylinesIndex = source.indexOf('class="daily-sports-line-list"', branchIndex);
-  const fallbackIndex = source.indexOf('class="daily-story-list"', storylinesIndex);
-
-  assert.ok(branchIndex >= 0);
-  assert.ok(storylinesIndex > branchIndex);
-  assert.ok(fallbackIndex > storylinesIndex);
-
-  const storylinesBranch = source.slice(storylinesIndex, fallbackIndex);
-  const fallbackBranch = source.slice(fallbackIndex);
-
-  assert.match(storylinesBranch, /subtopic\.storylines\.map/);
-  assert.doesNotMatch(storylinesBranch, /subtopic\.refs\.map/);
-  assert.match(fallbackBranch, /subtopic\.refs\.map/);
-});
-
-test('sports topic page keeps subtopic other and otherItems anchors distinct', () => {
-  const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
-
-  assert.match(source, /function getSportsSubtopicNavLabel/);
-  assert.match(source, /subtopic\.id === 'other' \? '其他项目'/);
-  assert.match(source, /const otherItemsSectionId = isSports \? 'other-items' : 'other'/);
-  assert.match(source, /href=\{`#\$\{otherItemsSectionId\}`\}/);
-  assert.match(source, /id=\{otherItemsSectionId\}/);
-  assert.match(source, /isSports \? '其他值得看' : '其他'/);
-});
-
-test('sports otherItems label rendering does not let item.subtopic override reader-facing labels', () => {
-  const source = fs.readFileSync('src/pages/daily-news/topic/[id].astro', 'utf-8');
-  const functionStart = source.indexOf('function getOtherItemLabel');
-  const functionEnd = source.indexOf('function getSportsSubtopicNavLabel', functionStart);
-
-  assert.ok(functionStart >= 0);
-  assert.ok(functionEnd > functionStart);
-
-  const functionSource = source.slice(functionStart, functionEnd);
-
-  assert.match(functionSource, /ref\.categoryLabel \|\| ref\.label/);
-  assert.doesNotMatch(functionSource, /ref\.item\.subtopic/);
-  assert.doesNotMatch(functionSource, /getDisplayLabel\(topic, ref\.label, ref\.item\.subtopic\)/);
+  assert.match(source, /data-daily-field-filter/);
+  assert.match(source, /new URLSearchParams\(window\.location\.search\)\.get\('field'\)/);
+  assert.match(source, /data-daily-feed-item/);
+  assert.match(source, /daily-feed-source-chips/);
+  assert.match(source, /daily-source-chip/);
+  assert.match(source, /item\.sourceGroups\.map/);
+  assert.match(source, /function getSourceLinkTitle/);
+  assert.match(source, /escapePattern\(sourceName\)/);
+  assert.match(source, /data-daily-source-trigger/);
+  assert.match(source, /aria-expanded="false"/);
+  assert.match(source, /daily-source-chip-links/);
+  assert.match(source, /data-daily-source-panel/);
+  assert.match(source, /addEventListener\('click'/);
+  assert.match(source, /daily-morning-feed-section/);
 });
 
 test('daily news pages do not rely on date query parameters for archive navigation', () => {

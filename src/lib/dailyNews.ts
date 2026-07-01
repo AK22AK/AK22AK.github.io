@@ -126,6 +126,78 @@ export type DailyNewsHomeContract = {
   }>;
 };
 
+export type DailyNewsFeedRef = {
+  title: string;
+  summary: string;
+  url: string;
+  sourceId: string;
+  sourceName: string;
+  pubTime?: string;
+};
+
+export type DailyNewsFeedSourceGroup = {
+  sourceId: string;
+  sourceName: string;
+  refs: DailyNewsFeedRef[];
+};
+
+export type DailyNewsFeedItem = {
+  id: string;
+  rank: string;
+  title: string;
+  summary: string;
+  fieldId: string;
+  fieldName: string;
+  subtopicId?: string;
+  subtopicName?: string;
+  importance: StoryCluster['importance'];
+  heat: number;
+  sourceNames: string[];
+  sourceCount: number;
+  refs: DailyNewsFeedRef[];
+  sourceGroups: DailyNewsFeedSourceGroup[];
+};
+
+export type DailyNewsMorningBrief = {
+  id: string;
+  title: string;
+  url: string;
+  sourceName: string;
+  fieldId: string;
+  fieldName: string;
+  pubTime?: string;
+};
+
+export type DailyNewsFieldFilter = {
+  id: string;
+  name: string;
+  href: string;
+  count: number;
+  active: boolean;
+};
+
+export type DailyNewsFeedView = {
+  date: string;
+  dateLabel: string;
+  weekdayLabel: string;
+  updatedAtLabel: string;
+  selectedField: string;
+  stats: {
+    rawItems: number;
+    feedItems: number;
+    fields: number;
+    sources: number;
+  };
+  filters: DailyNewsFieldFilter[];
+  morningBriefs: DailyNewsMorningBrief[];
+  feedItems: DailyNewsFeedItem[];
+  archive: Array<{
+    date: string;
+    label: string;
+    href: string;
+  }>;
+};
+
 export type RefEntry = {
   id?: string;
   ref: NewsRef;
@@ -718,7 +790,7 @@ function clustersFromItems(data: DailyNewsData, topics: TopicConfig[], existing:
   return topics
     .filter(topic => topic.active !== false && !seenTopics.has(topic.id))
     .flatMap(topic => {
-      const items = getTopItems(data.items.filter(item => item.topic === topic.id), 3);
+      const items = getTopItems(data.items.filter(item => item.topic === topic.id), 30);
       return items.map((item, index) => ({
         id: `${topic.id}-${slugify(item.title)}`,
         topic: topic.id,
@@ -726,7 +798,7 @@ function clustersFromItems(data: DailyNewsData, topics: TopicConfig[], existing:
         title: item.title,
         summary: getItemSummary(item),
         why_it_matters: '旧数据没有故事簇，前端按权重从原始新闻中提取。',
-        importance: index === 0 ? 'major' as const : 'minor' as const,
+        importance: index < 3 ? 'major' as const : 'minor' as const,
         confidence: item.source === 'v2ex' ? 'low' as const : 'medium' as const,
         quality_reasons: item.source === 'v2ex' ? ['社区讨论'] : ['旧数据回退'],
         refs: [itemRef(item, data.items)],
@@ -758,6 +830,265 @@ export function getTopicClusters(clusters: StoryCluster[], topicId: string) {
 
 export function getLeadClusters(clusters: StoryCluster[], maxCount = 6) {
   return clusters.slice(0, maxCount);
+}
+
+function textTokens(value: string) {
+  const normalized = value.toLowerCase();
+  const latin = normalized.match(/[a-z0-9]+/g) || [];
+  const cjk = Array.from(normalized.matchAll(/[\u4e00-\u9fa5]/g)).map(match => match[0]);
+  return new Set([...latin, ...cjk]);
+}
+
+function textOverlapScore(a: string, b: string) {
+  const left = textTokens(a);
+  const right = textTokens(b);
+  let score = 0;
+  for (const token of left) {
+    if (right.has(token)) score += token.length > 1 ? 2 : 1;
+  }
+  return score;
+}
+
+function resolveFeedRefs(
+  items: DailyNewsItem[],
+  refs: Array<NewsRef | RefEntry>,
+  sourceMeta: Map<string, { name: string }>,
+  maxCount = 4,
+): DailyNewsFeedRef[] {
+  return refs
+    .map(ref => resolveRefItem(items, typeof ref === 'object' ? ref.ref : ref))
+    .filter((item): item is DailyNewsItem => Boolean(item))
+    .slice(0, maxCount)
+    .map(item => ({
+      title: item.title,
+      summary: getItemSummary(item),
+      url: item.url,
+      sourceId: item.source,
+      sourceName: getSourceName(item.source, sourceMeta),
+      pubTime: item.pub_time,
+    }));
+}
+
+function getHomeTargetRefs(data: DailyNewsData, highlight: DailyNewsHomeContract['highlights'][number]) {
+  const target = highlight.target;
+
+  if (target.type === 'dailyLine') {
+    return getTargetDailyLine(data, target)?.items || [];
+  }
+
+  if (target.type === 'subtopic' && target.topicSlug === 'sports' && target.subtopicId) {
+    const subtopic = data.sports_page?.subtopics.find(entry => entry.id === target.subtopicId);
+    if (!subtopic) return [];
+
+    const storylines = subtopic.storylines || [];
+    const bestLine = storylines
+      .map(line => ({
+        line,
+        score: textOverlapScore(`${highlight.title} ${highlight.summary}`, `${line.title} ${line.summary}`),
+      }))
+      .sort((a, b) => b.score - a.score)[0];
+
+    if (bestLine && bestLine.score > 0) return bestLine.line.items;
+    if (storylines[0]?.items?.length) return storylines[0].items;
+    return subtopic.items || [];
+  }
+
+  return [];
+}
+
+function clustersFromDailyHome(data: DailyNewsData): StoryCluster[] {
+  return (data.daily_home?.highlights || []).map((highlight, index) => {
+    const refs = getHomeTargetRefs(data, highlight).map(entry => entry.ref);
+    return {
+      id: highlight.id,
+      topic: highlight.target.topicSlug || '',
+      subtopic: highlight.target.subtopicId,
+      title: highlight.title,
+      summary: resolveHomeHighlightSummary(data, highlight),
+      importance: normalizeImportance(undefined, index),
+      confidence: normalizeConfidence(undefined, refs),
+      quality_reasons: refs.length > 1 ? ['首页提炼', '多来源出现'] : ['首页提炼'],
+      refs,
+    };
+  }).filter(cluster => cluster.topic);
+}
+
+function getFeedSourceClusters(data: DailyNewsData, topics: TopicConfig[]) {
+  if (data.story_clusters?.length) return normalizeStoryClusters(data, topics);
+  if (data.daily_home?.highlights?.length) return clustersFromDailyHome(data);
+  return normalizeStoryClusters(data, topics);
+}
+
+function getTopicNameMap(topics: TopicConfig[]) {
+  return new Map(topics.map(topic => [topic.id, topic.name]));
+}
+
+function getFeedSortScore(item: Omit<DailyNewsFeedItem, 'rank'>) {
+  const importanceScore = item.importance === 'lead' ? 300 : item.importance === 'major' ? 200 : 100;
+  return importanceScore + item.heat * 20 + item.sourceCount * 3;
+}
+
+function groupFeedRefsBySource(refs: DailyNewsFeedRef[]): DailyNewsFeedSourceGroup[] {
+  const groups = new Map<string, DailyNewsFeedSourceGroup>();
+
+  for (const ref of refs) {
+    const key = ref.sourceId || ref.sourceName;
+    if (!groups.has(key)) {
+      groups.set(key, {
+        sourceId: ref.sourceId,
+        sourceName: ref.sourceName,
+        refs: [],
+      });
+    }
+    groups.get(key)!.refs.push(ref);
+  }
+
+  return Array.from(groups.values());
+}
+
+function isMorningItem(item: DailyNewsItem, topics: TopicConfig[]) {
+  const topic = topics.find(entry => entry.id === item.topic);
+  return getItemSubtopic(item, topic) === 'morning-brief' || isMorningPost(item.title);
+}
+
+function buildMorningBriefs(
+  data: DailyNewsData,
+  topics: TopicConfig[],
+  sourceMeta: Map<string, { name: string }>,
+): DailyNewsMorningBrief[] {
+  const topicNames = getTopicNameMap(topics);
+  const seen = new Set<string>();
+  return data.items
+    .filter(item => isMorningItem(item, topics))
+    .filter(item => {
+      const key = item.url || item.title;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => pubTimeValue(b.pub_time) - pubTimeValue(a.pub_time))
+    .map((item, index) => ({
+      id: `morning-${item._idx || index + 1}`,
+      title: item.title,
+      url: item.url,
+      sourceName: getSourceName(item.source, sourceMeta),
+      fieldId: item.topic,
+      fieldName: topicNames.get(item.topic) || item.topic,
+      pubTime: item.pub_time,
+    }));
+}
+
+function balanceFeedItems(items: Array<Omit<DailyNewsFeedItem, 'rank'>>) {
+  const remaining = [...items].sort((a, b) => getFeedSortScore(b) - getFeedSortScore(a));
+  const balanced: Array<Omit<DailyNewsFeedItem, 'rank'>> = [];
+
+  while (remaining.length > 0) {
+    const recent = balanced.slice(-3);
+    const saturatedField = recent.length === 3 && recent.every(item => item.fieldId === recent[0].fieldId)
+      ? recent[0].fieldId
+      : '';
+    const nextIndex = saturatedField
+      ? remaining.findIndex(item => item.fieldId !== saturatedField)
+      : 0;
+    const index = nextIndex >= 0 ? nextIndex : 0;
+    balanced.push(remaining.splice(index, 1)[0]);
+  }
+
+  return balanced;
+}
+
+export function buildDailyNewsFeedView(
+  data: DailyNewsData,
+  topics: TopicConfig[],
+  archiveDates: string[],
+  selectedField = 'all',
+): DailyNewsFeedView {
+  const activeTopics = topics.filter(topic => topic.active !== false);
+  const topicNames = getTopicNameMap(topics);
+  const sourceMeta = buildSourceMeta(topics);
+  const morningBriefs = buildMorningBriefs(data, topics, sourceMeta);
+  const clusters = getFeedSourceClusters(data, activeTopics);
+  const rawFeedItems = clusters
+    .filter(cluster => cluster.topic && (topicNames.has(cluster.topic) || cluster.topic === selectedField))
+    .map(cluster => {
+      const topic = topics.find(entry => entry.id === cluster.topic);
+      const refs = resolveFeedRefs(data.items, cluster.refs, sourceMeta, 4);
+      const sourceGroups = groupFeedRefsBySource(refs);
+      const sourceNames = sourceGroups.map(group => group.sourceName);
+      const heat = getClusterHeat(cluster);
+      const subtopicName = getSubtopicName(topic, cluster.subtopic);
+      return {
+        id: cluster.id,
+        title: cluster.title,
+        summary: cluster.summary,
+        fieldId: cluster.topic,
+        fieldName: topicNames.get(cluster.topic) || cluster.topic,
+        subtopicId: cluster.subtopic,
+        subtopicName,
+        importance: cluster.importance,
+        heat,
+        sourceNames,
+        sourceCount: sourceGroups.length,
+        refs,
+        sourceGroups,
+      };
+    })
+    .filter(item => item.subtopicId !== 'morning-brief');
+
+  const balanced = balanceFeedItems(rawFeedItems);
+  const visibleItems = selectedField === 'all'
+    ? balanced
+    : balanced.filter(item => item.fieldId === selectedField);
+  const fieldCounts = new Map<string, number>();
+  for (const item of balanced) {
+    fieldCounts.set(item.fieldId, (fieldCounts.get(item.fieldId) || 0) + 1);
+  }
+
+  const fieldHref = (fieldId: string) => fieldId === 'all'
+    ? getDailyNewsHomeHref(data.date)
+    : `${getDailyNewsHomeHref(data.date)}?field=${encodeURIComponent(fieldId)}`;
+
+  return {
+    date: data.date,
+    dateLabel: formatDateLabel(data.date),
+    weekdayLabel: getWeekdayLabel(data.date),
+    updatedAtLabel: formatUpdateTime(data.update_time),
+    selectedField,
+    stats: {
+      rawItems: data.items.length,
+      feedItems: visibleItems.length,
+      fields: fieldCounts.size,
+      sources: new Set(data.items.map(item => item.source)).size,
+    },
+    filters: [
+      {
+        id: 'all',
+        name: '全部',
+        href: fieldHref('all'),
+        count: balanced.length,
+        active: selectedField === 'all',
+      },
+      ...activeTopics
+        .filter(topic => fieldCounts.has(topic.id))
+        .map(topic => ({
+          id: topic.id,
+          name: topic.name,
+          href: fieldHref(topic.id),
+          count: fieldCounts.get(topic.id) || 0,
+          active: selectedField === topic.id,
+        })),
+    ],
+    morningBriefs,
+    feedItems: visibleItems.map((item, index) => ({
+      ...item,
+      rank: String(index + 1).padStart(2, '0'),
+    })),
+    archive: archiveDates.slice(0, 8).map(date => ({
+      date,
+      label: formatDateLabel(date),
+      href: getDailyNewsHomeHref(date),
+    })),
+  };
 }
 
 export function getClusterSourceSummary(
@@ -838,7 +1169,8 @@ export function getDailyNewsHomeHref(date?: string) {
 }
 
 export function getTopicHref(topicId: string, date?: string) {
-  return date ? `/daily-news/${date}/topic/${topicId}/` : `/daily-news/topic/${topicId}/`;
+  const base = getDailyNewsHomeHref(date);
+  return `${base}?field=${encodeURIComponent(topicId)}`;
 }
 
 export function getTopicAnchorHref(topicId: string, date: string, anchor: string) {

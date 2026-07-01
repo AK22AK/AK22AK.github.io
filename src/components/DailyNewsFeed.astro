@@ -1,0 +1,280 @@
+---
+import Calendar from './Calendar.astro';
+import type { DailyNewsFeedView } from '../lib/dailyNews';
+
+interface Props {
+  view: DailyNewsFeedView;
+  availableDates: string[];
+  currentDate: string;
+  previousDate?: string;
+  nextDate?: string;
+}
+
+const { view, availableDates, currentDate, previousDate, nextDate } = Astro.props;
+const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updatedAtLabel}` : view.weekdayLabel;
+
+function escapePattern(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function getSourceLinkTitle(title: string, sourceName: string) {
+  return title
+    .replace(new RegExp(`^${escapePattern(sourceName)}\\s*[：:｜|]\\s*`), '')
+    .trim();
+}
+---
+
+<div class="daily-redesign daily-redesign--home daily-feed" data-daily-feed-root>
+  <aside class="daily-side">
+    <section class="daily-date-block">
+      <p class="daily-side-label">Daily</p>
+      <div class="daily-date-line">
+        {previousDate ? <a href={`/daily-news/${previousDate}/`} aria-label="前一天">‹</a> : <span></span>}
+        <strong>{view.dateLabel}</strong>
+        {nextDate ? <a href={`/daily-news/${nextDate}/`} aria-label="后一天">›</a> : <span></span>}
+      </div>
+      <p>{updateText} 更新</p>
+    </section>
+
+    <section>
+      <p class="daily-side-label">Fields</p>
+      <nav class="daily-side-nav daily-field-nav" aria-label="领域筛选">
+        {view.filters.map(filter => (
+          <a
+            class:list={[{ active: filter.active }]}
+            href={filter.href}
+            data-daily-field-filter={filter.id}
+            data-daily-field-name={filter.name}
+          >
+            <span>{filter.name}</span>
+            <small>{filter.count}</small>
+          </a>
+        ))}
+      </nav>
+    </section>
+
+    <section class="daily-feed-side-section">
+      <p class="daily-side-label">Archive</p>
+      <Calendar dates={availableDates} currentDate={currentDate} compact />
+    </section>
+  </aside>
+
+  <main class="daily-content">
+    <div class="daily-mobile-date">
+      <span>{view.dateLabel}</span>
+      <span>{updateText}</span>
+    </div>
+    <nav class="daily-mobile-picker daily-field-picker" aria-label="领域快捷筛选">
+      {view.filters.map(filter => (
+        <a
+          class:list={[{ active: filter.active }]}
+          href={filter.href}
+          data-daily-field-filter={filter.id}
+          data-daily-field-name={filter.name}
+        >
+          {filter.name}
+        </a>
+      ))}
+    </nav>
+
+    <header class="daily-hero daily-feed-hero">
+      <div class="daily-meta">
+        <span>{view.stats.rawItems} 条原文</span>
+        <span>{view.stats.feedItems} 条资讯</span>
+        {view.morningBriefs.length > 0 && <span>{view.morningBriefs.length} 条早报</span>}
+        <span>{view.stats.fields} 个领域</span>
+        <span>{view.stats.sources} 个来源</span>
+      </div>
+      <h1>今日资讯</h1>
+    </header>
+
+    {view.morningBriefs.length > 0 && (
+      <section class="daily-section daily-morning-feed-section" data-daily-morning-section>
+        <div class="daily-section-head">
+          <h2>早报</h2>
+          <p data-daily-morning-count>{view.morningBriefs.length} 条</p>
+        </div>
+        <div class="daily-morning-feed-list">
+          {view.morningBriefs.map(brief => (
+            <a
+              class="daily-morning-feed-row"
+              href={brief.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-daily-morning-item
+              data-field={brief.fieldId}
+            >
+              <span>{brief.sourceName}</span>
+              <strong>{brief.title}</strong>
+            </a>
+          ))}
+        </div>
+      </section>
+    )}
+
+    <section class="daily-section daily-feed-section" aria-live="polite">
+      <div class="daily-section-head">
+        <h2 data-daily-feed-heading>资讯流</h2>
+        <p data-daily-feed-count>{view.feedItems.length} 条</p>
+      </div>
+
+      <div class="daily-feed-list">
+        {view.feedItems.map(item => (
+          <article class="daily-feed-card" data-daily-feed-item data-field={item.fieldId}>
+            <a class="daily-feed-card-main" href={item.refs[0]?.url || '#'} target="_blank" rel="noopener noreferrer">
+              <span class="daily-rank">{item.rank}</span>
+              <div>
+                <div class="daily-feed-card-meta">
+                  <span>{item.fieldName}</span>
+                </div>
+                <h3>{item.title}</h3>
+                <p>{item.summary}</p>
+              </div>
+            </a>
+
+            <div class="daily-feed-card-footer">
+              {item.sourceGroups.length > 0 && (
+                <div class="daily-feed-source-chips" aria-label="来源">
+                  <div class="daily-source-chip-row">
+                    {item.sourceGroups.map((group, groupIndex) => (
+                      <button
+                        class="daily-source-chip"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls={`daily-source-panel-${item.rank}-${groupIndex}`}
+                        data-daily-source-trigger
+                      >
+                        {group.sourceName}
+                      </button>
+                    ))}
+                  </div>
+                  {item.sourceGroups.map((group, groupIndex) => (
+                    <div
+                      id={`daily-source-panel-${item.rank}-${groupIndex}`}
+                      class="daily-source-chip-links"
+                      data-daily-source-panel
+                      hidden
+                    >
+                      {group.refs.map(ref => (
+                        <a href={ref.url} target="_blank" rel="noopener noreferrer">
+                          {getSourceLinkTitle(ref.title, group.sourceName)}
+                        </a>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section id="archive" class="daily-section daily-anchor">
+      <div class="daily-section-head">
+        <h2>归档</h2>
+      </div>
+      <Calendar dates={availableDates} currentDate={currentDate} compact />
+      <p class="daily-archive-more"><a href="/daily-news/archive/">更多日期</a></p>
+    </section>
+  </main>
+</div>
+
+<script>
+  (() => {
+    const root = document.querySelector('[data-daily-feed-root]');
+    if (!root) return;
+
+    const filters = Array.from(root.querySelectorAll('[data-daily-field-filter]'));
+    const items = Array.from(root.querySelectorAll('[data-daily-feed-item]'));
+    const morningSection = root.querySelector('[data-daily-morning-section]');
+    const morningItems = Array.from(root.querySelectorAll('[data-daily-morning-item]'));
+    const morningCount = root.querySelector('[data-daily-morning-count]');
+    const heading = root.querySelector('[data-daily-feed-heading]');
+    const count = root.querySelector('[data-daily-feed-count]');
+
+    function getFieldFromUrl() {
+      return new URLSearchParams(window.location.search).get('field') || 'all';
+    }
+
+    root.addEventListener('click', event => {
+      const target = event.target;
+      const trigger = target instanceof Element
+        ? target.closest('[data-daily-source-trigger]')
+        : null;
+      if (!(trigger instanceof HTMLButtonElement)) return;
+
+      const sourceArea = trigger.closest('.daily-feed-source-chips');
+      if (!sourceArea) return;
+
+      const panelId = trigger.getAttribute('aria-controls');
+      const panel = panelId ? document.getElementById(panelId) : null;
+      const shouldOpen = trigger.getAttribute('aria-expanded') !== 'true';
+
+      sourceArea.querySelectorAll('[data-daily-source-trigger]').forEach(item => {
+        if (item instanceof HTMLButtonElement) item.setAttribute('aria-expanded', 'false');
+      });
+      sourceArea.querySelectorAll('[data-daily-source-panel]').forEach(item => {
+        if (item instanceof HTMLElement) item.hidden = true;
+      });
+
+      if (shouldOpen) {
+        trigger.setAttribute('aria-expanded', 'true');
+        if (panel instanceof HTMLElement) panel.hidden = false;
+      }
+    });
+
+    function applyField(field) {
+      const available = new Set(filters.map(filter => filter.getAttribute('data-daily-field-filter')));
+      const selected = available.has(field) ? field : 'all';
+      const selectedFilter = filters.find(filter => filter.getAttribute('data-daily-field-filter') === selected);
+      const selectedName = selectedFilter?.getAttribute('data-daily-field-name') || '全部';
+      let visibleCount = 0;
+
+      filters.forEach(filter => {
+        filter.classList.toggle('active', filter.getAttribute('data-daily-field-filter') === selected);
+      });
+
+      items.forEach(item => {
+        const visible = selected === 'all' || item.getAttribute('data-field') === selected;
+        item.hidden = !visible;
+        if (!visible) {
+          item.querySelectorAll('[data-daily-source-trigger]').forEach(trigger => {
+            if (trigger instanceof HTMLButtonElement) trigger.setAttribute('aria-expanded', 'false');
+          });
+          item.querySelectorAll('[data-daily-source-panel]').forEach(panel => {
+            if (panel instanceof HTMLElement) panel.hidden = true;
+          });
+        }
+        if (visible) visibleCount += 1;
+      });
+
+      let visibleMorningCount = 0;
+      morningItems.forEach(item => {
+        const visible = selected === 'all' || item.getAttribute('data-field') === selected;
+        item.hidden = !visible;
+        if (visible) visibleMorningCount += 1;
+      });
+
+      if (morningSection) morningSection.hidden = visibleMorningCount === 0;
+      if (morningCount) morningCount.textContent = `${visibleMorningCount} 条`;
+      if (heading) heading.textContent = selected === 'all' ? '资讯流' : `${selectedName}资讯流`;
+      if (count) count.textContent = `${visibleCount} 条`;
+    }
+
+    filters.forEach(filter => {
+      filter.addEventListener('click', event => {
+        const href = filter.getAttribute('href');
+        if (!href) return;
+        const url = new URL(href, window.location.href);
+        if (url.pathname !== window.location.pathname) return;
+        event.preventDefault();
+        window.history.pushState({}, '', `${url.pathname}${url.search}`);
+        applyField(getFieldFromUrl());
+      });
+    });
+
+    window.addEventListener('popstate', () => applyField(getFieldFromUrl()));
+    applyField(getFieldFromUrl());
+  })();
+</script>
