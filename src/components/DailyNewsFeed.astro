@@ -12,6 +12,8 @@ interface Props {
 
 const { view, availableDates, currentDate, previousDate, nextDate } = Astro.props;
 const updateText = view.updatedAtLabel ? `${view.weekdayLabel} · ${view.updatedAtLabel}` : view.weekdayLabel;
+const isLatestDate = !nextDate;
+const heroEyebrow = isLatestDate ? '今日资讯' : '';
 
 function escapePattern(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -64,19 +66,6 @@ function getSourceLinkTitle(title: string, sourceName: string) {
       <span>{view.dateLabel}</span>
       <span>{updateText}</span>
     </div>
-    <nav class="daily-mobile-picker daily-field-picker" aria-label="领域快捷筛选">
-      {view.filters.map(filter => (
-        <a
-          class:list={[{ active: filter.active }]}
-          href={filter.href}
-          data-daily-field-filter={filter.id}
-          data-daily-field-name={filter.name}
-        >
-          {filter.name}
-        </a>
-      ))}
-    </nav>
-
     <header class="daily-hero daily-feed-hero">
       <div class="daily-meta">
         <span>{view.stats.rawItems} 条原文</span>
@@ -85,8 +74,25 @@ function getSourceLinkTitle(title: string, sourceName: string) {
         <span>{view.stats.fields} 个领域</span>
         <span>{view.stats.sources} 个来源</span>
       </div>
-      <h1>今日资讯</h1>
+      <h1>
+        {heroEyebrow && <span>{heroEyebrow}</span>}
+        <strong>{view.dateLabel}</strong>
+      </h1>
     </header>
+
+    <nav class="daily-feed-filter-strip daily-field-picker" aria-label="领域筛选">
+      {view.filters.map(filter => (
+        <a
+          class:list={[{ active: filter.active }]}
+          href={filter.href}
+          data-daily-field-filter={filter.id}
+          data-daily-field-name={filter.name}
+        >
+          <span>{filter.name}</span>
+          <small>{filter.count}</small>
+        </a>
+      ))}
+    </nav>
 
     {view.morningBriefs.length > 0 && (
       <section class="daily-section daily-morning-feed-section" data-daily-morning-section>
@@ -121,7 +127,7 @@ function getSourceLinkTitle(title: string, sourceName: string) {
       <div class="daily-feed-list">
         {view.feedItems.map(item => (
           <article class="daily-feed-card" data-daily-feed-item data-field={item.fieldId}>
-            <a class="daily-feed-card-main" href={item.refs[0]?.url || '#'} target="_blank" rel="noopener noreferrer">
+            <div class="daily-feed-card-main">
               <span class="daily-rank">{item.rank}</span>
               <div>
                 <div class="daily-feed-card-meta">
@@ -130,7 +136,7 @@ function getSourceLinkTitle(title: string, sourceName: string) {
                 <h3>{item.title}</h3>
                 <p>{item.summary}</p>
               </div>
-            </a>
+            </div>
 
             <div class="daily-feed-card-footer">
               {item.sourceGroups.length > 0 && (

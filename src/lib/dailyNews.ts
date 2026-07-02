@@ -869,16 +869,40 @@ function resolveFeedRefs(
     }));
 }
 
-function getHomeTargetRefs(data: DailyNewsData, highlight: DailyNewsHomeContract['highlights'][number]) {
+function getHomeTargetKey(target: DailyNewsHomeTarget) {
+  return [
+    target.type,
+    target.topicSlug || '',
+    target.dailyLineId || '',
+    target.subtopicId || '',
+    target.specialSlug || '',
+    target.href || '',
+  ].join(':');
+}
+
+function getHomeTargetCluster(data: DailyNewsData, highlight: DailyNewsHomeContract['highlights'][number]) {
   const target = highlight.target;
 
   if (target.type === 'dailyLine') {
-    return getTargetDailyLine(data, target)?.items || [];
+    const line = getTargetDailyLine(data, target);
+    return {
+      id: `${target.topicSlug || 'topic'}-${target.dailyLineId || highlight.id}`,
+      title: line?.title?.trim() || highlight.title,
+      summary: line?.summary?.trim() || highlight.summary,
+      refs: line?.items || [],
+    };
   }
 
   if (target.type === 'subtopic' && target.topicSlug === 'sports' && target.subtopicId) {
     const subtopic = data.sports_page?.subtopics.find(entry => entry.id === target.subtopicId);
-    if (!subtopic) return [];
+    if (!subtopic) {
+      return {
+        id: highlight.id,
+        title: highlight.title,
+        summary: highlight.summary,
+        refs: [] as RefEntry[],
+      };
+    }
 
     const storylines = subtopic.storylines || [];
     const bestLine = storylines
@@ -888,29 +912,48 @@ function getHomeTargetRefs(data: DailyNewsData, highlight: DailyNewsHomeContract
       }))
       .sort((a, b) => b.score - a.score)[0];
 
-    if (bestLine && bestLine.score > 0) return bestLine.line.items;
-    if (storylines[0]?.items?.length) return storylines[0].items;
-    return subtopic.items || [];
+    const line = bestLine && bestLine.score > 0 ? bestLine.line : storylines[0];
+    return {
+      id: `${target.topicSlug}-${target.subtopicId}`,
+      title: line?.title?.trim() || subtopic.title || highlight.title,
+      summary: line?.summary?.trim() || subtopic.summary || highlight.summary,
+      refs: line?.items?.length ? line.items : (subtopic.items || []),
+    };
   }
 
-  return [];
+  return {
+    id: highlight.id,
+    title: highlight.title,
+    summary: highlight.summary,
+    refs: [] as RefEntry[],
+  };
 }
 
 function clustersFromDailyHome(data: DailyNewsData): StoryCluster[] {
-  return (data.daily_home?.highlights || []).map((highlight, index) => {
-    const refs = getHomeTargetRefs(data, highlight).map(entry => entry.ref);
-    return {
-      id: highlight.id,
+  const seenTargets = new Set<string>();
+  const clusters: StoryCluster[] = [];
+
+  for (const highlight of data.daily_home?.highlights || []) {
+    const key = getHomeTargetKey(highlight.target);
+    if (seenTargets.has(key)) continue;
+    seenTargets.add(key);
+
+    const targetCluster = getHomeTargetCluster(data, highlight);
+    const refs = targetCluster.refs.map(entry => entry.ref);
+    clusters.push({
+      id: targetCluster.id,
       topic: highlight.target.topicSlug || '',
       subtopic: highlight.target.subtopicId,
-      title: highlight.title,
-      summary: resolveHomeHighlightSummary(data, highlight),
-      importance: normalizeImportance(undefined, index),
+      title: targetCluster.title,
+      summary: targetCluster.summary,
+      importance: normalizeImportance(undefined, clusters.length),
       confidence: normalizeConfidence(undefined, refs),
       quality_reasons: refs.length > 1 ? ['首页提炼', '多来源出现'] : ['首页提炼'],
       refs,
-    };
-  }).filter(cluster => cluster.topic);
+    });
+  }
+
+  return clusters.filter(cluster => cluster.topic);
 }
 
 function getFeedSourceClusters(data: DailyNewsData, topics: TopicConfig[]) {

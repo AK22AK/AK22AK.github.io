@@ -3,24 +3,18 @@ import Ginger from './Ginger.astro';
 
 const navItems = [
   { href: '/', label: '首页' },
-  { href: '/about', label: '关于' },
-  { href: '/projects', label: '项目' },
-  { href: '/blog', label: '想法' },
+  { href: '/blog/', label: '文章' },
+  { href: '/projects/', label: '项目' },
+  { href: '/daily-news/', label: '资讯' },
+  { href: '/about/', label: '关于' },
 ];
 
 const mobilePrimaryItems = [
   { href: '/', label: '首页' },
   { href: '/blog/', label: '文章' },
   { href: '/projects/', label: '项目' },
+  { href: '/daily-news/', label: '资讯' },
   { href: '/about/', label: '关于' },
-];
-
-const newsItems = [
-  { href: '/daily-news/', label: '资讯首页' },
-  { href: '/daily-news/?field=tech', label: '科技' },
-  { href: '/daily-news/?field=sports', label: '体育' },
-  { href: '/daily-news/archive/', label: '归档' },
-  { href: '/daily-news/sources/', label: '来源' },
 ];
 ---
 
@@ -31,16 +25,6 @@ const newsItems = [
       {navItems.map(item => (
         <a href={item.href}>{item.label}</a>
       ))}
-      <div class="nav-dropdown">
-        <a href="/daily-news/" class="nav-dropdown-trigger">资讯</a>
-        <div class="nav-dropdown-menu" aria-label="资讯快速入口">
-          <a href="/daily-news/">日报首页</a>
-          <a href="/daily-news/?field=tech">科技</a>
-          <a href="/daily-news/?field=sports">体育</a>
-          <a href="/daily-news/archive/">归档</a>
-          <a href="/daily-news/sources/">来源</a>
-        </div>
-      </div>
     </nav>
     <button
       class="mobile-nav-toggle"
@@ -55,18 +39,9 @@ const newsItems = [
   </div>
   <nav id="site-mobile-menu" class="mobile-nav-panel" aria-label="移动端主导航" hidden data-mobile-nav-panel>
     <div class="mobile-nav-links">
-      {mobilePrimaryItems.slice(0, 3).map(item => (
+      {mobilePrimaryItems.map(item => (
         <a class="mobile-nav-link" href={item.href}>{item.label}</a>
       ))}
-      <section class="mobile-nav-section" aria-labelledby="mobile-news-heading">
-        <div id="mobile-news-heading" class="mobile-nav-section-title">资讯</div>
-        <div class="mobile-nav-subgrid">
-          {newsItems.map(item => (
-            <a class="mobile-nav-sublink" href={item.href}>{item.label}</a>
-          ))}
-        </div>
-      </section>
-      <a class="mobile-nav-link" href={mobilePrimaryItems[3].href}>{mobilePrimaryItems[3].label}</a>
     </div>
   </nav>
 </header>

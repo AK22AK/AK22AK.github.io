@@ -146,6 +146,17 @@ test('daily news feed converts recent home highlights into mixed feed items with
         subtopicId: 'football',
       },
     },
+    {
+      id: 'highlight-ai-second',
+      title: '月之暗面融资',
+      summary: '同一条 AI 线索里的另一个首页亮点。',
+      label: '科技',
+      target: {
+        type: 'dailyLine',
+        topicSlug: 'tech',
+        dailyLineId: 'line-ai',
+      },
+    },
   ];
   data.topic_pages!.tech.dailyLines = [
     {
@@ -180,6 +191,11 @@ test('daily news feed converts recent home highlights into mixed feed items with
   assert.equal(view.feedItems.length, 2);
   assert.equal(view.feedItems[0].rank, '01');
   assert.equal(view.filters.map(filter => filter.id).join(','), 'all,tech,sports');
+  assert.equal(view.feedItems.find(item => item.fieldId === 'tech')?.title, '中国大模型融资热潮');
+  assert.equal(
+    view.feedItems.find(item => item.fieldId === 'tech')?.summary,
+    'DeepSeek 与月之暗面融资线索共同指向中国 AI 基础设施赛道资本集中。',
+  );
   assert.equal(view.feedItems.find(item => item.fieldId === 'tech')?.refs[0].title, 'Second raw title');
   assert.equal(view.feedItems.find(item => item.fieldId === 'sports')?.refs[0].title, 'Raw English sports title');
 });
@@ -562,8 +578,10 @@ test('daily feed component owns field filters and expandable sources', () => {
   const source = fs.readFileSync('src/components/DailyNewsFeed.astro', 'utf-8');
 
   assert.match(source, /data-daily-field-filter/);
+  assert.match(source, /daily-feed-filter-strip/);
   assert.match(source, /new URLSearchParams\(window\.location\.search\)\.get\('field'\)/);
   assert.match(source, /data-daily-feed-item/);
+  assert.doesNotMatch(source, /class="daily-feed-card-main" href=/);
   assert.match(source, /daily-feed-source-chips/);
   assert.match(source, /daily-source-chip/);
   assert.match(source, /item\.sourceGroups\.map/);
