@@ -77,6 +77,7 @@ export type SubtopicSectionGroup = {
 export type DailyNewsData = {
   date: string;
   update_time?: string;
+  feed_events?: DailyNewsFeedEvent[];
   daily_home?: DailyNewsHomeContract;
   topic_pages?: Record<string, GenericTopicPageContract>;
   sports_page?: SportsTopicPageContract;
@@ -133,6 +134,21 @@ export type DailyNewsFeedRef = {
   sourceId: string;
   sourceName: string;
   pubTime?: string;
+};
+
+export type DailyNewsFeedEvent = {
+  id: string;
+  title: string;
+  summary: string;
+  module: string;
+  subModule?: string;
+  refs: Array<{
+    ref: NewsRef;
+    source?: string;
+    _title?: string;
+  }>;
+  priority?: number;
+  rank?: number;
 };
 
 export type DailyNewsFeedSourceGroup = {
@@ -851,20 +867,27 @@ function textOverlapScore(a: string, b: string) {
 
 function resolveFeedRefs(
   items: DailyNewsItem[],
-  refs: Array<NewsRef | RefEntry>,
+  refs: Array<NewsRef | (RefEntry & { source?: string })>,
   sourceMeta: Map<string, { name: string }>,
   maxCount = 4,
 ): DailyNewsFeedRef[] {
   return refs
-    .map(ref => resolveRefItem(items, typeof ref === 'object' ? ref.ref : ref))
-    .filter((item): item is DailyNewsItem => Boolean(item))
+    .map(ref => {
+      const item = resolveRefItem(items, typeof ref === 'object' ? ref.ref : ref);
+      if (!item) return undefined;
+      return {
+        item,
+        sourceId: typeof ref === 'object' && ref.source ? ref.source : item.source,
+      };
+    })
+    .filter((entry): entry is { item: DailyNewsItem; sourceId: string } => Boolean(entry))
     .slice(0, maxCount)
-    .map(item => ({
+    .map(({ item, sourceId }) => ({
       title: item.title,
       summary: getItemSummary(item),
       url: item.url,
-      sourceId: item.source,
-      sourceName: getSourceName(item.source, sourceMeta),
+      sourceId,
+      sourceName: getSourceName(sourceId, sourceMeta),
       pubTime: item.pub_time,
     }));
 }
@@ -962,6 +985,22 @@ function getFeedSourceClusters(data: DailyNewsData, topics: TopicConfig[]) {
   return normalizeStoryClusters(data, topics);
 }
 
+function eventImportance(priority: number | undefined, index: number): StoryCluster['importance'] {
+  if (typeof priority === 'number') {
+    if (priority >= 90) return 'lead';
+    if (priority >= 60) return 'major';
+    return 'minor';
+  }
+  return index === 0 ? 'lead' : index < 8 ? 'major' : 'minor';
+}
+
+function eventHeat(priority: number | undefined) {
+  if (typeof priority !== 'number') return 2;
+  if (priority >= 90) return 3;
+  if (priority >= 50) return 2;
+  return 1;
+}
+
 function getTopicNameMap(topics: TopicConfig[]) {
   return new Map(topics.map(topic => [topic.id, topic.name]));
 }
@@ -1040,6 +1079,40 @@ function balanceFeedItems(items: Array<Omit<DailyNewsFeedItem, 'rank'>>) {
   return balanced;
 }
 
+function feedItemsFromEvents(
+  data: DailyNewsData,
+  topics: TopicConfig[],
+  sourceMeta: Map<string, { name: string }>,
+): Array<Omit<DailyNewsFeedItem, 'rank'>> {
+  const topicNames = getTopicNameMap(topics);
+
+  return (data.feed_events || [])
+    .filter(event => event.title.trim() && event.summary.trim() && topicNames.has(event.module))
+    .map((event, index) => {
+      const topic = topics.find(entry => entry.id === event.module);
+      const refs = resolveFeedRefs(data.items, event.refs, sourceMeta, event.refs.length);
+      const sourceGroups = groupFeedRefsBySource(refs);
+      const sourceNames = sourceGroups.map(group => group.sourceName);
+      const subtopicName = getSubtopicName(topic, event.subModule);
+
+      return {
+        id: event.id,
+        title: event.title,
+        summary: event.summary,
+        fieldId: event.module,
+        fieldName: topicNames.get(event.module) || event.module,
+        subtopicId: event.subModule,
+        subtopicName,
+        importance: eventImportance(event.priority, index),
+        heat: eventHeat(event.priority),
+        sourceNames,
+        sourceCount: sourceGroups.length,
+        refs,
+        sourceGroups,
+      };
+    });
+}
+
 export function buildDailyNewsFeedView(
   data: DailyNewsData,
   topics: TopicConfig[],
@@ -1050,35 +1123,39 @@ export function buildDailyNewsFeedView(
   const topicNames = getTopicNameMap(topics);
   const sourceMeta = buildSourceMeta(topics);
   const morningBriefs = buildMorningBriefs(data, topics, sourceMeta);
-  const clusters = getFeedSourceClusters(data, activeTopics);
-  const rawFeedItems = clusters
-    .filter(cluster => cluster.topic && (topicNames.has(cluster.topic) || cluster.topic === selectedField))
-    .map(cluster => {
-      const topic = topics.find(entry => entry.id === cluster.topic);
-      const refs = resolveFeedRefs(data.items, cluster.refs, sourceMeta, 4);
-      const sourceGroups = groupFeedRefsBySource(refs);
-      const sourceNames = sourceGroups.map(group => group.sourceName);
-      const heat = getClusterHeat(cluster);
-      const subtopicName = getSubtopicName(topic, cluster.subtopic);
-      return {
-        id: cluster.id,
-        title: cluster.title,
-        summary: cluster.summary,
-        fieldId: cluster.topic,
-        fieldName: topicNames.get(cluster.topic) || cluster.topic,
-        subtopicId: cluster.subtopic,
-        subtopicName,
-        importance: cluster.importance,
-        heat,
-        sourceNames,
-        sourceCount: sourceGroups.length,
-        refs,
-        sourceGroups,
-      };
-    })
-    .filter(item => item.subtopicId !== 'morning-brief');
+  const eventFeedItems = data.feed_events?.length
+    ? feedItemsFromEvents(data, activeTopics, sourceMeta)
+    : [];
+  const rawFeedItems = eventFeedItems.length > 0
+    ? eventFeedItems
+    : getFeedSourceClusters(data, activeTopics)
+      .filter(cluster => cluster.topic && (topicNames.has(cluster.topic) || cluster.topic === selectedField))
+      .map(cluster => {
+        const topic = topics.find(entry => entry.id === cluster.topic);
+        const refs = resolveFeedRefs(data.items, cluster.refs, sourceMeta, 4);
+        const sourceGroups = groupFeedRefsBySource(refs);
+        const sourceNames = sourceGroups.map(group => group.sourceName);
+        const heat = getClusterHeat(cluster);
+        const subtopicName = getSubtopicName(topic, cluster.subtopic);
+        return {
+          id: cluster.id,
+          title: cluster.title,
+          summary: cluster.summary,
+          fieldId: cluster.topic,
+          fieldName: topicNames.get(cluster.topic) || cluster.topic,
+          subtopicId: cluster.subtopic,
+          subtopicName,
+          importance: cluster.importance,
+          heat,
+          sourceNames,
+          sourceCount: sourceGroups.length,
+          refs,
+          sourceGroups,
+        };
+      })
+      .filter(item => item.subtopicId !== 'morning-brief');
 
-  const balanced = balanceFeedItems(rawFeedItems);
+  const balanced = eventFeedItems.length > 0 ? rawFeedItems : balanceFeedItems(rawFeedItems);
   const visibleItems = selectedField === 'all'
     ? balanced
     : balanced.filter(item => item.fieldId === selectedField);

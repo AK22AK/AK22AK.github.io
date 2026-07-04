@@ -20,6 +20,21 @@ export const refEntrySchema = z.object({
   note: z.string().optional(),
 });
 
+export const feedEventSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  summary: z.string(),
+  module: z.string(),
+  subModule: z.string().optional(),
+  refs: z.array(z.object({
+    ref: newsRefSchema,
+    source: z.string().optional(),
+    _title: z.string().optional(),
+  })),
+  priority: z.number().optional(),
+  rank: z.number().optional(),
+});
+
 export const topicPageSchema = z.object({
   stats: z.object({
     rawItems: z.number().optional(),
@@ -116,6 +131,7 @@ export const sportsPageSchema = z.object({
 export const dailyNewsEntrySchema = z.object({
   date: z.string(),
   update_time: z.string().optional(),
+  feed_events: z.array(feedEventSchema).optional(),
   daily_home: z.object({
     intro: z.string(),
     stats: z.object({

@@ -14,7 +14,7 @@ import {
   type DailyNewsData,
   type TopicConfig,
 } from '../src/lib/dailyNews.ts';
-import { sportsPageSchema } from '../src/lib/dailyNewsContentSchema.ts';
+import { dailyNewsEntrySchema, sportsPageSchema } from '../src/lib/dailyNewsContentSchema.ts';
 
 const topics: TopicConfig[] = [
   {
@@ -198,6 +198,68 @@ test('daily news feed converts recent home highlights into mixed feed items with
   );
   assert.equal(view.feedItems.find(item => item.fieldId === 'tech')?.refs[0].title, 'Second raw title');
   assert.equal(view.feedItems.find(item => item.fieldId === 'sports')?.refs[0].title, 'Raw English sports title');
+});
+
+test('daily news feed prefers feed_events and preserves backend order', () => {
+  const data = baseData();
+  data.feed_events = [
+    {
+      id: 'event-sports-transfer',
+      title: '曼城签下 Anderson',
+      summary: '曼城以高额转会费签下 Anderson，多家来源跟进同一事件。',
+      module: 'sports',
+      subModule: 'football',
+      priority: 20,
+      rank: 2,
+      refs: [
+        { ref: 1, source: 'source-a' },
+        { ref: 2, source: 'source-b' },
+      ],
+    },
+    {
+      id: 'event-tech-ai',
+      title: 'AI 产品发布',
+      summary: '科技事件由数据端放在第二位，前端不重新排序。',
+      module: 'tech',
+      subModule: 'ai',
+      priority: 100,
+      rank: 1,
+      refs: [{ ref: 1, source: 'source-b' }],
+    },
+  ];
+
+  const view = buildDailyNewsFeedView(data, topics, [data.date]);
+  const sportsView = buildDailyNewsFeedView(data, topics, [data.date], 'sports');
+
+  assert.equal(view.feedItems.length, 2);
+  assert.equal(view.feedItems[0].title, '曼城签下 Anderson');
+  assert.equal(view.feedItems[1].title, 'AI 产品发布');
+  assert.equal(view.feedItems[0].refs.length, 2);
+  assert.deepEqual(view.feedItems[0].sourceGroups.map(group => group.sourceName), ['source-a', 'source-b']);
+  assert.deepEqual(view.feedItems[1].sourceGroups.map(group => group.sourceName), ['source-b']);
+  assert.equal(view.filters.find(filter => filter.id === 'all')?.count, 2);
+  assert.equal(view.filters.find(filter => filter.id === 'sports')?.count, 1);
+  assert.equal(view.filters.find(filter => filter.id === 'tech')?.count, 1);
+  assert.equal(sportsView.feedItems.length, 1);
+  assert.equal(sportsView.feedItems[0].fieldId, 'sports');
+});
+
+test('daily news schema accepts feed_events from the data repo contract', () => {
+  const data = baseData();
+  data.feed_events = [
+    {
+      id: 'event-tech-funding',
+      title: '快手可灵获注资',
+      summary: '快手初始投资者同意向北京可灵注资。',
+      module: 'tech',
+      subModule: 'business',
+      refs: [{ ref: 2, source: 'source-b', _title: 'source title hint' }],
+      priority: 100,
+      rank: 1,
+    },
+  ];
+
+  assert.doesNotThrow(() => dailyNewsEntrySchema.parse(data));
 });
 
 test('daily news feed falls back to raw items for legacy dates without home contracts', () => {
