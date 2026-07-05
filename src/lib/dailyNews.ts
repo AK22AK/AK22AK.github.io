@@ -867,13 +867,15 @@ function textOverlapScore(a: string, b: string) {
 
 function resolveFeedRefs(
   items: DailyNewsItem[],
-  refs: Array<NewsRef | (RefEntry & { source?: string })>,
+  refs: Array<NewsRef | (RefEntry & { source?: string; _title?: string })>,
   sourceMeta: Map<string, { name: string }>,
   maxCount = 4,
 ): DailyNewsFeedRef[] {
   return refs
     .map(ref => {
-      const item = resolveRefItem(items, typeof ref === 'object' ? ref.ref : ref);
+      const item = typeof ref === 'object'
+        ? resolveFeedRefItem(items, ref)
+        : resolveRefItem(items, ref);
       if (!item) return undefined;
       return {
         item,
@@ -890,6 +892,35 @@ function resolveFeedRefs(
       sourceName: getSourceName(sourceId, sourceMeta),
       pubTime: item.pub_time,
     }));
+}
+
+function normalizeRefTitle(value: string | undefined) {
+  return (value || '').replace(/\s+/g, '').trim();
+}
+
+function resolveFeedRefItem(
+  items: DailyNewsItem[],
+  ref: RefEntry & { source?: string; _title?: string },
+) {
+  const refValue = typeof ref.ref === 'number' ? ref.ref : Number(ref.ref);
+  const hasNumericRef = Number.isFinite(refValue) && String(refValue) === String(ref.ref).trim();
+  const expectedTitle = normalizeRefTitle(ref._title);
+  const exactMatches = items.filter(item => {
+    if (hasNumericRef && item._idx !== refValue) return false;
+    if (ref.source && item.source !== ref.source) return false;
+    if (expectedTitle && normalizeRefTitle(item.title) !== expectedTitle) return false;
+    return true;
+  });
+  if (exactMatches.length === 1) return exactMatches[0];
+
+  if (ref.source && expectedTitle) {
+    const sourceTitleMatches = items.filter(item =>
+      item.source === ref.source && normalizeRefTitle(item.title) === expectedTitle
+    );
+    if (sourceTitleMatches.length === 1) return sourceTitleMatches[0];
+  }
+
+  return resolveRefItem(items, ref.ref);
 }
 
 function getHomeTargetKey(target: DailyNewsHomeTarget) {

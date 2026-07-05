@@ -244,6 +244,36 @@ test('daily news feed prefers feed_events and preserves backend order', () => {
   assert.equal(sportsView.feedItems[0].fieldId, 'sports');
 });
 
+test('daily news feed resolves feed_event refs by source and title when ref ids collide', () => {
+  const data = baseData();
+  data.items.push({
+    _idx: 1,
+    title: 'Correct source-b article',
+    summary: 'This is the article referenced by the feed event.',
+    url: 'https://example.com/correct',
+    source: 'source-b',
+    topic: 'tech',
+    subtopic: 'ai',
+  });
+  data.feed_events = [
+    {
+      id: 'event-colliding-ref',
+      title: 'AI 数据中心项目',
+      summary: '事件摘要引用 source-b 的文章，不能被同 ref 的 source-a 原文串联。',
+      module: 'tech',
+      subModule: 'ai',
+      priority: 100,
+      refs: [{ ref: 1, source: 'source-b', _title: 'Correct source-b article' }],
+    },
+  ];
+
+  const view = buildDailyNewsFeedView(data, topics, [data.date]);
+
+  assert.equal(view.feedItems[0].refs[0].sourceId, 'source-b');
+  assert.equal(view.feedItems[0].refs[0].title, 'Correct source-b article');
+  assert.equal(view.feedItems[0].refs[0].url, 'https://example.com/correct');
+});
+
 test('daily news schema accepts feed_events from the data repo contract', () => {
   const data = baseData();
   data.feed_events = [
