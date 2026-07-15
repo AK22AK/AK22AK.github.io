@@ -2389,6 +2389,78 @@ p {
   }
 }
 
+/* Back to top */
+.back-to-top {
+  position: fixed;
+  right: max(24px, calc((100vw - 980px) / 2 - 64px));
+  bottom: 28px;
+  z-index: 70;
+  display: grid;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  place-items: center;
+  color: #fff;
+  cursor: pointer;
+  visibility: hidden;
+  background: #28231f;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 50%;
+  box-shadow: 0 8px 24px rgba(40, 35, 31, 0.2);
+  opacity: 0;
+  transform: translateY(8px);
+  pointer-events: none;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease,
+    visibility 160ms;
+}
+
+.back-to-top.is-visible {
+  visibility: visible;
+  opacity: 0.96;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.back-to-top:hover {
+  background: #171412;
+  opacity: 1;
+}
+
+.back-to-top:active {
+  transform: translateY(1px);
+}
+
+.back-to-top svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 900px) {
+  .back-to-top {
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .back-to-top {
+    transition: none;
+  }
+}
+
+@media print {
+  .back-to-top {
+    display: none;
+  }
+}
+
 /* Daily News Redesign */
 body {
   color: #282522;

@@ -4,6 +4,7 @@ import Header from '../components/Header.astro';
 import NewsHeader from '../components/NewsHeader.astro';
 import Footer from '../components/Footer.astro';
 import NewsFooter from '../components/NewsFooter.astro';
+import BackToTop from '../components/BackToTop.astro';
 
 interface Props {
   title: string;
@@ -31,5 +32,6 @@ const { title, description = 'AK22AK 的个人主页', variant = 'default' } = A
       </div>
     </main>
     {variant === 'news' ? <NewsFooter /> : <Footer />}
+    <BackToTop />
   </body>
 </html>
