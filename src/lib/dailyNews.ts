@@ -1059,6 +1059,15 @@ function groupFeedRefsBySource(refs: DailyNewsFeedRef[]): DailyNewsFeedSourceGro
   return Array.from(groups.values());
 }
 
+function getFeedSubtopicId(
+  subtopicId: string | undefined,
+  sourceGroups: DailyNewsFeedSourceGroup[],
+) {
+  const isV2exDiscussion = sourceGroups.some(group => group.sourceId === 'v2ex');
+  if (isV2exDiscussion) return 'community';
+  return subtopicId === 'community' ? undefined : subtopicId;
+}
+
 function isMorningItem(item: DailyNewsItem, topics: TopicConfig[]) {
   const topic = topics.find(entry => entry.id === item.topic);
   return getItemSubtopic(item, topic) === 'morning-brief' || isMorningPost(item.title);
@@ -1124,7 +1133,8 @@ function feedItemsFromEvents(
       const refs = resolveFeedRefs(data.items, event.refs, sourceMeta, event.refs.length);
       const sourceGroups = groupFeedRefsBySource(refs);
       const sourceNames = sourceGroups.map(group => group.sourceName);
-      const subtopicName = getSubtopicName(topic, event.subModule);
+      const subtopicId = getFeedSubtopicId(event.subModule, sourceGroups);
+      const subtopicName = getSubtopicName(topic, subtopicId);
 
       return {
         id: event.id,
@@ -1132,7 +1142,7 @@ function feedItemsFromEvents(
         summary: event.summary,
         fieldId: event.module,
         fieldName: topicNames.get(event.module) || event.module,
-        subtopicId: event.subModule,
+        subtopicId,
         subtopicName,
         importance: eventImportance(event.priority, index),
         heat: eventHeat(event.priority),
@@ -1167,14 +1177,15 @@ export function buildDailyNewsFeedView(
         const sourceGroups = groupFeedRefsBySource(refs);
         const sourceNames = sourceGroups.map(group => group.sourceName);
         const heat = getClusterHeat(cluster);
-        const subtopicName = getSubtopicName(topic, cluster.subtopic);
+        const subtopicId = getFeedSubtopicId(cluster.subtopic, sourceGroups);
+        const subtopicName = getSubtopicName(topic, subtopicId);
         return {
           id: cluster.id,
           title: cluster.title,
           summary: cluster.summary,
           fieldId: cluster.topic,
           fieldName: topicNames.get(cluster.topic) || cluster.topic,
-          subtopicId: cluster.subtopic,
+          subtopicId,
           subtopicName,
           importance: cluster.importance,
           heat,
