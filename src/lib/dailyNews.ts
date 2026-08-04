@@ -375,7 +375,7 @@ const SUBTOPIC_LABEL_OVERRIDES: Record<string, string> = {
   chips: '芯片与硬件产业',
   'developer-tools': '开发者工具',
   business: '公司与商业',
-  community: '社区讨论',
+  community: '社区',
   football: '足球',
   fpl: 'FPL',
   'snooker-world-championship': '斯诺克世锦赛',
@@ -1189,15 +1189,44 @@ export function buildDailyNewsFeedView(
   const balanced = eventFeedItems.length > 0 ? rawFeedItems : balanceFeedItems(rawFeedItems);
   const visibleItems = selectedField === 'all'
     ? balanced
-    : balanced.filter(item => item.fieldId === selectedField);
+    : balanced.filter(item => item.fieldId === selectedField || item.subtopicId === selectedField);
   const fieldCounts = new Map<string, number>();
+  const subtopicCounts = new Map<string, number>();
   for (const item of balanced) {
     fieldCounts.set(item.fieldId, (fieldCounts.get(item.fieldId) || 0) + 1);
+    if (item.subtopicId) {
+      subtopicCounts.set(item.subtopicId, (subtopicCounts.get(item.subtopicId) || 0) + 1);
+    }
   }
 
   const fieldHref = (fieldId: string) => fieldId === 'all'
     ? getDailyNewsHomeHref(data.date)
     : `${getDailyNewsHomeHref(data.date)}?field=${encodeURIComponent(fieldId)}`;
+  const filters: DailyNewsFieldFilter[] = [
+    {
+      id: 'all',
+      name: '全部',
+      href: fieldHref('all'),
+      count: balanced.length,
+      active: selectedField === 'all',
+    },
+    ...activeTopics
+      .filter(topic => fieldCounts.has(topic.id))
+      .map(topic => ({
+        id: topic.id,
+        name: topic.name,
+        href: fieldHref(topic.id),
+        count: fieldCounts.get(topic.id) || 0,
+        active: selectedField === topic.id,
+      })),
+    ...(subtopicCounts.has('community') ? [{
+      id: 'community',
+      name: '社区',
+      href: fieldHref('community'),
+      count: subtopicCounts.get('community') || 0,
+      active: selectedField === 'community',
+    }] : []),
+  ];
 
   return {
     date: data.date,
@@ -1208,27 +1237,10 @@ export function buildDailyNewsFeedView(
     stats: {
       rawItems: data.items.length,
       feedItems: visibleItems.length,
-      fields: fieldCounts.size,
+      fields: filters.length - 1,
       sources: new Set(data.items.map(item => item.source)).size,
     },
-    filters: [
-      {
-        id: 'all',
-        name: '全部',
-        href: fieldHref('all'),
-        count: balanced.length,
-        active: selectedField === 'all',
-      },
-      ...activeTopics
-        .filter(topic => fieldCounts.has(topic.id))
-        .map(topic => ({
-          id: topic.id,
-          name: topic.name,
-          href: fieldHref(topic.id),
-          count: fieldCounts.get(topic.id) || 0,
-          active: selectedField === topic.id,
-        })),
-    ],
+    filters,
     morningBriefs,
     feedItems: visibleItems.map((item, index) => ({
       ...item,

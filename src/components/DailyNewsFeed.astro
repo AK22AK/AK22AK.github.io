@@ -126,12 +126,12 @@ function getSourceLinkTitle(title: string, sourceName: string) {
 
       <div class="daily-feed-list">
         {view.feedItems.map(item => (
-          <article class="daily-feed-card" data-daily-feed-item data-field={item.fieldId}>
+          <article class="daily-feed-card" data-daily-feed-item data-field={item.fieldId} data-subtopic={item.subtopicId}>
             <div class="daily-feed-card-main">
               <span class="daily-rank">{item.rank}</span>
               <div>
                 <div class="daily-feed-card-meta">
-                  <span>{item.fieldName}</span>
+                  <span>{item.subtopicName || item.fieldName}</span>
                 </div>
                 <h3>{item.title}</h3>
                 <p>{item.summary}</p>
@@ -242,7 +242,9 @@ function getSourceLinkTitle(title: string, sourceName: string) {
       });
 
       items.forEach(item => {
-        const visible = selected === 'all' || item.getAttribute('data-field') === selected;
+        const visible = selected === 'all'
+          || item.getAttribute('data-field') === selected
+          || item.getAttribute('data-subtopic') === selected;
         item.hidden = !visible;
         if (!visible) {
           item.querySelectorAll('[data-daily-source-trigger]').forEach(trigger => {

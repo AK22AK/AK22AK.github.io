@@ -244,6 +244,27 @@ test('daily news feed prefers feed_events and preserves backend order', () => {
   assert.equal(sportsView.feedItems[0].fieldId, 'sports');
 });
 
+test('daily news feed exposes and filters the community subtopic', () => {
+  const data = baseData();
+  data.feed_events = [{
+    id: 'event-v2ex-community',
+    title: 'V2EX 社区热议',
+    summary: '一条评论数较高的社区讨论，被保留在资讯流中供读者查看。',
+    module: 'tech',
+    subModule: 'community',
+    priority: 20,
+    refs: [{ ref: 2, source: 'source-b' }],
+  }];
+
+  const allView = buildDailyNewsFeedView(data, topics, [data.date]);
+  const communityView = buildDailyNewsFeedView(data, topics, [data.date], 'community');
+
+  assert.equal(allView.filters.find(filter => filter.id === 'community')?.name, '社区');
+  assert.equal(allView.filters.find(filter => filter.id === 'community')?.count, 1);
+  assert.equal(communityView.feedItems.length, 1);
+  assert.equal(communityView.feedItems[0].subtopicName, '社区');
+});
+
 test('daily news feed resolves feed_event refs by source and title when ref ids collide', () => {
   const data = baseData();
   data.items.push({
