@@ -344,6 +344,7 @@ export const UNCATEGORIZED_SUBTOPIC = {
 
 const TOPIC_ICONS: Record<string, string> = {
   tech: '⚡',
+  community: '💬',
   game: '🎮',
   snooker: '🎱',
   sports: '🏟️',
@@ -430,6 +431,13 @@ export function buildSourceMeta(topics: TopicConfig[]) {
     }
   }
   return meta;
+}
+
+function getItemFieldId(
+  item: DailyNewsItem,
+  sourceMeta: Map<string, { name: string; url?: string; topic: string }>,
+) {
+  return sourceMeta.get(item.source)?.topic || item.topic;
 }
 
 export function getTopicIcon(id: string) {
@@ -802,24 +810,15 @@ function clustersFromTopicSummaries(data: DailyNewsData, existing: StoryCluster[
 }
 
 function clustersFromItems(data: DailyNewsData, topics: TopicConfig[], existing: StoryCluster[]): StoryCluster[] {
+  const sourceMeta = buildSourceMeta(topics);
   const seenTopics = new Set(existing.map(cluster => cluster.topic));
   return topics
     .filter(topic => topic.active !== false && !seenTopics.has(topic.id))
     .flatMap(topic => {
-      const topicItems = data.items.filter(item => item.topic === topic.id);
-      const topItems = getTopItems(topicItems, 30);
-      const v2exItems = getTopItems(
-        topicItems.filter(item => item.source === 'v2ex'),
-        10,
-      );
-      const selectedItems = [
-        ...topItems,
-        ...v2exItems.filter(item => !topItems.some(topItem => topItem.url === item.url)),
-      ];
-      return selectedItems.map((item, index) => ({
+      const topicItems = data.items.filter(item => getItemFieldId(item, sourceMeta) === topic.id);
+      return getTopItems(topicItems, 30).map((item, index) => ({
         id: `${topic.id}-${slugify(item.title)}`,
         topic: topic.id,
-        subtopic: getItemSubtopic(item, topic),
         title: item.title,
         summary: getItemSummary(item),
         why_it_matters: '旧数据没有故事簇，前端按权重从原始新闻中提取。',
@@ -1068,15 +1067,6 @@ function groupFeedRefsBySource(refs: DailyNewsFeedRef[]): DailyNewsFeedSourceGro
   return Array.from(groups.values());
 }
 
-function getFeedSubtopicId(
-  subtopicId: string | undefined,
-  sourceGroups: DailyNewsFeedSourceGroup[],
-) {
-  const isV2exDiscussion = sourceGroups.some(group => group.sourceId === 'v2ex');
-  if (isV2exDiscussion) return 'community';
-  return subtopicId === 'community' ? undefined : subtopicId;
-}
-
 function isMorningItem(item: DailyNewsItem, topics: TopicConfig[]) {
   const topic = topics.find(entry => entry.id === item.topic);
   return getItemSubtopic(item, topic) === 'morning-brief' || isMorningPost(item.title);
@@ -1103,8 +1093,8 @@ function buildMorningBriefs(
       title: item.title,
       url: item.url,
       sourceName: getSourceName(item.source, sourceMeta),
-      fieldId: item.topic,
-      fieldName: topicNames.get(item.topic) || item.topic,
+      fieldId: getItemFieldId(item, sourceMeta),
+      fieldName: topicNames.get(getItemFieldId(item, sourceMeta)) || getItemFieldId(item, sourceMeta),
       pubTime: item.pub_time,
     }));
 }
@@ -1138,21 +1128,21 @@ function feedItemsFromEvents(
   return (data.feed_events || [])
     .filter(event => event.title.trim() && event.summary.trim() && topicNames.has(event.module))
     .map((event, index) => {
-      const topic = topics.find(entry => entry.id === event.module);
       const refs = resolveFeedRefs(data.items, event.refs, sourceMeta, event.refs.length);
       const sourceGroups = groupFeedRefsBySource(refs);
       const sourceNames = sourceGroups.map(group => group.sourceName);
-      const subtopicId = getFeedSubtopicId(event.subModule, sourceGroups);
-      const subtopicName = getSubtopicName(topic, subtopicId);
+      const sourceModules = new Set(
+        refs.map(ref => sourceMeta.get(ref.sourceId)?.topic || event.module),
+      );
+      const fieldId = sourceModules.size === 1 ? [...sourceModules][0] : event.module;
+      const fieldName = topicNames.get(fieldId) || fieldId;
 
       return {
         id: event.id,
         title: event.title,
         summary: event.summary,
-        fieldId: event.module,
-        fieldName: topicNames.get(event.module) || event.module,
-        subtopicId,
-        subtopicName,
+        fieldId,
+        fieldName,
         importance: eventImportance(event.priority, index),
         heat: eventHeat(event.priority),
         sourceNames,
@@ -1181,21 +1171,18 @@ export function buildDailyNewsFeedView(
     : getFeedSourceClusters(data, activeTopics)
       .filter(cluster => cluster.topic && (topicNames.has(cluster.topic) || cluster.topic === selectedField))
       .map(cluster => {
-        const topic = topics.find(entry => entry.id === cluster.topic);
         const refs = resolveFeedRefs(data.items, cluster.refs, sourceMeta, 4);
         const sourceGroups = groupFeedRefsBySource(refs);
         const sourceNames = sourceGroups.map(group => group.sourceName);
         const heat = getClusterHeat(cluster);
-        const subtopicId = getFeedSubtopicId(cluster.subtopic, sourceGroups);
-        const subtopicName = getSubtopicName(topic, subtopicId);
+        const fieldId = cluster.topic;
+        const fieldName = topicNames.get(fieldId) || fieldId;
         return {
           id: cluster.id,
           title: cluster.title,
           summary: cluster.summary,
-          fieldId: cluster.topic,
-          fieldName: topicNames.get(cluster.topic) || cluster.topic,
-          subtopicId,
-          subtopicName,
+          fieldId,
+          fieldName,
           importance: cluster.importance,
           heat,
           sourceNames,
@@ -1204,19 +1191,15 @@ export function buildDailyNewsFeedView(
           sourceGroups,
         };
       })
-      .filter(item => item.subtopicId !== 'morning-brief');
+      .filter(item => !isMorningPost(item.title));
 
   const balanced = eventFeedItems.length > 0 ? rawFeedItems : balanceFeedItems(rawFeedItems);
   const visibleItems = selectedField === 'all'
     ? balanced
-    : balanced.filter(item => item.fieldId === selectedField || item.subtopicId === selectedField);
+    : balanced.filter(item => item.fieldId === selectedField);
   const fieldCounts = new Map<string, number>();
-  const subtopicCounts = new Map<string, number>();
   for (const item of balanced) {
     fieldCounts.set(item.fieldId, (fieldCounts.get(item.fieldId) || 0) + 1);
-    if (item.subtopicId) {
-      subtopicCounts.set(item.subtopicId, (subtopicCounts.get(item.subtopicId) || 0) + 1);
-    }
   }
 
   const fieldHref = (fieldId: string) => fieldId === 'all'
@@ -1239,13 +1222,6 @@ export function buildDailyNewsFeedView(
         count: fieldCounts.get(topic.id) || 0,
         active: selectedField === topic.id,
       })),
-    ...(subtopicCounts.has('community') ? [{
-      id: 'community',
-      name: '社区',
-      href: fieldHref('community'),
-      count: subtopicCounts.get('community') || 0,
-      active: selectedField === 'community',
-    }] : []),
   ];
 
   return {

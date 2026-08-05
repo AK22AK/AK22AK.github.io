@@ -29,6 +29,12 @@ const topics: TopicConfig[] = [
     active: true,
     subtopics: [{ id: 'football', name: '足球' }],
   },
+  {
+    id: 'community',
+    name: '社区',
+    active: true,
+    sources: [{ id: 'v2ex', name: 'V2EX' }],
+  },
 ];
 
 test('daily news date labels use China calendar semantics independent of build timezone', () => {
@@ -244,7 +250,7 @@ test('daily news feed prefers feed_events and preserves backend order', () => {
   assert.equal(sportsView.feedItems[0].fieldId, 'sports');
 });
 
-test('daily news feed exposes and filters the community subtopic', () => {
+test('daily news feed exposes and filters the community source module', () => {
   const data = baseData();
   data.items.push({
     _idx: 3,
@@ -258,8 +264,7 @@ test('daily news feed exposes and filters the community subtopic', () => {
     id: 'event-v2ex-community',
     title: 'V2EX 社区热议',
     summary: '一条评论数较高的社区讨论，被保留在资讯流中供读者查看。',
-    module: 'tech',
-    subModule: 'community',
+    module: 'community',
     priority: 20,
     refs: [{ ref: 3, source: 'v2ex' }],
   }];
@@ -270,7 +275,7 @@ test('daily news feed exposes and filters the community subtopic', () => {
   assert.equal(allView.filters.find(filter => filter.id === 'community')?.name, '社区');
   assert.equal(allView.filters.find(filter => filter.id === 'community')?.count, 1);
   assert.equal(communityView.feedItems.length, 1);
-  assert.equal(communityView.feedItems[0].subtopicName, '社区');
+  assert.equal(communityView.feedItems[0].fieldName, '社区');
 });
 
 test('daily news community filter only includes V2EX refs', () => {
@@ -289,7 +294,6 @@ test('daily news community filter only includes V2EX refs', () => {
       title: 'IT之家安全事件',
       summary: '这条 IT 之家内容不能被归入社区筛选。',
       module: 'tech',
-      subModule: 'community',
       priority: 80,
       refs: [{ ref: 1, source: 'source-a' }],
     },
@@ -297,8 +301,7 @@ test('daily news community filter only includes V2EX refs', () => {
       id: 'event-v2ex-community',
       title: 'V2EX 社区热议',
       summary: '这条 V2EX 内容应当进入社区筛选。',
-      module: 'tech',
-      subModule: 'community',
+      module: 'community',
       priority: 20,
       refs: [{ ref: 3, source: 'v2ex' }],
     },
@@ -307,7 +310,7 @@ test('daily news community filter only includes V2EX refs', () => {
   const view = buildDailyNewsFeedView(data, topics, [data.date], 'community');
 
   assert.equal(view.feedItems.length, 1);
-  assert.equal(view.feedItems[0].sourceNames[0], 'v2ex');
+  assert.equal(view.feedItems[0].sourceNames[0], 'V2EX');
 });
 
 test('legacy raw fallback keeps V2EX items visible for the community filter', () => {
@@ -319,13 +322,12 @@ test('legacy raw fallback keeps V2EX items visible for the community filter', ()
     url: 'https://v2ex.com/t/3',
     source: 'v2ex',
     topic: 'tech',
-    subtopic: 'community',
   });
 
   const view = buildDailyNewsFeedView(data, topics, [data.date], 'community');
 
   assert.equal(view.feedItems.length, 1);
-  assert.equal(view.feedItems[0].sourceNames[0], 'v2ex');
+  assert.equal(view.feedItems[0].sourceNames[0], 'V2EX');
 });
 
 test('daily news feed resolves feed_event refs by source and title when ref ids collide', () => {
