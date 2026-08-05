@@ -806,8 +806,17 @@ function clustersFromItems(data: DailyNewsData, topics: TopicConfig[], existing:
   return topics
     .filter(topic => topic.active !== false && !seenTopics.has(topic.id))
     .flatMap(topic => {
-      const items = getTopItems(data.items.filter(item => item.topic === topic.id), 30);
-      return items.map((item, index) => ({
+      const topicItems = data.items.filter(item => item.topic === topic.id);
+      const topItems = getTopItems(topicItems, 30);
+      const v2exItems = getTopItems(
+        topicItems.filter(item => item.source === 'v2ex'),
+        10,
+      );
+      const selectedItems = [
+        ...topItems,
+        ...v2exItems.filter(item => !topItems.some(topItem => topItem.url === item.url)),
+      ];
+      return selectedItems.map((item, index) => ({
         id: `${topic.id}-${slugify(item.title)}`,
         topic: topic.id,
         subtopic: getItemSubtopic(item, topic),

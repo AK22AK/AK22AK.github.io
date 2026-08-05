@@ -310,6 +310,24 @@ test('daily news community filter only includes V2EX refs', () => {
   assert.equal(view.feedItems[0].sourceNames[0], 'v2ex');
 });
 
+test('legacy raw fallback keeps V2EX items visible for the community filter', () => {
+  const data = baseData();
+  data.items.push({
+    _idx: 3,
+    title: 'V2EX raw community title',
+    summary: 'V2EX raw community summary',
+    url: 'https://v2ex.com/t/3',
+    source: 'v2ex',
+    topic: 'tech',
+    subtopic: 'community',
+  });
+
+  const view = buildDailyNewsFeedView(data, topics, [data.date], 'community');
+
+  assert.equal(view.feedItems.length, 1);
+  assert.equal(view.feedItems[0].sourceNames[0], 'v2ex');
+});
+
 test('daily news feed resolves feed_event refs by source and title when ref ids collide', () => {
   const data = baseData();
   data.items.push({
